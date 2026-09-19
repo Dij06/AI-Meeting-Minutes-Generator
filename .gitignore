@@ -1,0 +1,36 @@
+﻿# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+frontend/.venv/
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Uploaded meeting files (Audio / Video)
+uploads/*
+!uploads/.gitkeep
+frontend/uploads/*
+!frontend/uploads/.gitkeep
+
+# Generated Exports (PDF / DOCX)
+outputs/*
+!outputs/.gitkeep
+frontend/outputs/*
+!frontend/outputs/.gitkeep
+
+# Environment variables & API keys
+.env
+*.env
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
