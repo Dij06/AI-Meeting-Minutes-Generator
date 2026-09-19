@@ -1,46 +1,63 @@
 ﻿document.addEventListener("DOMContentLoaded", () => {
-    const fileInput = document.getElementById("meetingFile");
+    // Input elements
+    const fileInput = document.getElementById("meetingFileInput");
     const dropZone = document.getElementById("dropZone");
-    const generateBtn = document.getElementById("generateBtn");
-    const resetBtn = document.getElementById("resetBtn");
-    const selectedFileName = document.getElementById("selectedFileName");
+    const fileDetailsBar = document.getElementById("fileDetailsBar");
+    const fileNameDisplay = document.getElementById("fileNameDisplay");
+    const fileSizeDisplay = document.getElementById("fileSizeDisplay");
+    const audioPreview = document.getElementById("audioPreview");
+    const startPipelineBtn = document.getElementById("startPipelineBtn");
+    const clearFileBtn = document.getElementById("clearFileBtn");
 
-    // Progress elements
-    const progressSection = document.getElementById("progressSection");
-    const progressBar = document.getElementById("progressBar");
-    const progressPercent = document.getElementById("progressPercent");
-    const progressStatus = document.getElementById("progressStatus");
+    // Stepper & Progress elements
+    const pipelineProgress = document.getElementById("pipelineProgress");
+    const progressBarFill = document.getElementById("progressBarFill");
+    const progressPercentage = document.getElementById("progressPercentage");
+    const currentStatusText = document.getElementById("currentStatusText");
 
-    const stepUpload = document.getElementById("stepUpload");
-    const stepASR = document.getElementById("stepASR");
-    const stepNLP = document.getElementById("stepNLP");
-    const stepStructure = document.getElementById("stepStructure");
+    const stageUpload = document.getElementById("stageUpload");
+    const stageASR = document.getElementById("stageASR");
+    const stageNLP = document.getElementById("stageNLP");
+    const stageStructure = document.getElementById("stageStructure");
 
-    // Result elements
-    const resultsWrapper = document.getElementById("resultsWrapper");
-    const statDuration = document.getElementById("statDuration");
-    const statWordCount = document.getElementById("statWordCount");
-    const statDecisions = document.getElementById("statDecisions");
-    const statActionItems = document.getElementById("statActionItems");
+    // Output elements
+    const minutesOutputContainer = document.getElementById("minutesOutputContainer");
+    const kpiDuration = document.getElementById("kpiDuration");
+    const kpiWordCount = document.getElementById("kpiWordCount");
+    const kpiDecisions = document.getElementById("kpiDecisions");
+    const kpiTasks = document.getElementById("kpiTasks");
 
-    const summaryBox = document.getElementById("summaryBox");
-    const discussionList = document.getElementById("discussionList");
+    const summaryContent = document.getElementById("summaryContent");
+    const discussionPointsList = document.getElementById("discussionPointsList");
     const decisionsList = document.getElementById("decisionsList");
-    const actionItemsBody = document.getElementById("actionItemsBody");
-    const transcriptBox = document.getElementById("transcriptBox");
+    const actionTableBody = document.getElementById("actionTableBody");
+    const addRowBtn = document.getElementById("addRowBtn");
 
-    const copyTranscriptBtn = document.getElementById("copyTranscriptBtn");
-    const pdfBtn = document.getElementById("pdfBtn");
-    const docxBtn = document.getElementById("docxBtn");
+    const rawTranscriptText = document.getElementById("rawTranscriptText");
+    const transcriptSearch = document.getElementById("transcriptSearch");
+    const copyTranscriptOnlyBtn = document.getElementById("copyTranscriptOnlyBtn");
+
+    // Export buttons
+    const exportPdfBtn = document.getElementById("exportPdfBtn");
+    const exportDocxBtn = document.getElementById("exportDocxBtn");
+    const copyAllMinutesBtn = document.getElementById("copyAllMinutesBtn");
+
+    // Tab buttons
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const tabContents = document.querySelectorAll(".tab-content");
 
     let currentMeetingData = null;
+    let audioObjectUrl = null;
 
-    // File selection
+    // -------------------------------------------------------------
+    // File Selection & Audio Preview
+    // -------------------------------------------------------------
     fileInput.addEventListener("change", () => {
-        handleFileSelect(fileInput.files[0]);
+        if (fileInput.files.length > 0) {
+            handleFileSelection(fileInput.files[0]);
+        }
     });
 
-    // Drag and drop handlers
     dropZone.addEventListener("dragover", (e) => {
         e.preventDefault();
         dropZone.classList.add("dragover");
@@ -55,180 +72,340 @@
         dropZone.classList.remove("dragover");
         if (e.dataTransfer.files.length > 0) {
             fileInput.files = e.dataTransfer.files;
-            handleFileSelect(e.dataTransfer.files[0]);
+            handleFileSelection(e.dataTransfer.files[0]);
         }
     });
 
-    function handleFileSelect(file) {
-        if (!file) {
-            selectedFileName.textContent = "No file selected";
-            generateBtn.disabled = true;
-            return;
-        }
+    function handleFileSelection(file) {
+        if (!file) return;
+
         const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-        selectedFileName.textContent = `${file.name} (${sizeMb} MB)`;
-        generateBtn.disabled = false;
-        resetBtn.style.display = "inline-block";
+        fileNameDisplay.textContent = file.name;
+        fileSizeDisplay.textContent = `${sizeMb} MB &bull; ${file.type || "Audio"}`;
+
+        // Create browser object URL for native audio playback
+        if (audioObjectUrl) {
+            URL.revokeObjectURL(audioObjectUrl);
+        }
+        audioObjectUrl = URL.createObjectURL(file);
+        audioPreview.src = audioObjectUrl;
+
+        fileDetailsBar.style.display = "flex";
+        clearFileBtn.style.display = "inline-flex";
+        startPipelineBtn.disabled = false;
     }
 
-    resetBtn.addEventListener("click", () => {
+    clearFileBtn.addEventListener("click", () => {
         fileInput.value = "";
-        selectedFileName.textContent = "No file selected";
-        generateBtn.disabled = true;
-        resetBtn.style.display = "none";
-        progressSection.style.display = "none";
-        resultsWrapper.style.display = "none";
+        if (audioObjectUrl) {
+            URL.revokeObjectURL(audioObjectUrl);
+            audioObjectUrl = null;
+        }
+        audioPreview.pause();
+        audioPreview.removeAttribute("src");
+
+        fileDetailsBar.style.display = "none";
+        clearFileBtn.style.display = "none";
+        startPipelineBtn.disabled = true;
+        pipelineProgress.style.display = "none";
+        minutesOutputContainer.style.display = "none";
     });
 
-    // Generate Minutes with Percentage Progression
-    generateBtn.addEventListener("click", async () => {
+    // -------------------------------------------------------------
+    // Pipeline Progress & Execution
+    // -------------------------------------------------------------
+    startPipelineBtn.addEventListener("click", async () => {
         if (!fileInput.files.length) return;
 
         const file = fileInput.files[0];
         const formData = new FormData();
         formData.append("meeting_file", file);
 
-        generateBtn.disabled = true;
-        progressSection.style.display = "block";
-        resultsWrapper.style.display = "none";
+        startPipelineBtn.disabled = true;
+        pipelineProgress.style.display = "block";
+        minutesOutputContainer.style.display = "none";
 
-        // Progress stage simulation
-        updateProgress(15, "Uploading meeting audio recording...", stepUpload);
+        resetStepper();
+        setStep(15, "Uploading meeting audio recording to server...", stageUpload);
 
         try {
-            // Upload to server
             const uploadPromise = fetch("/upload", {
                 method: "POST",
                 body: formData
             });
 
-            // Simulate progress ticks while server processes
             await delay(600);
-            updateProgress(35, "Converting audio format and initializing Whisper ASR...", stepASR);
+            setStep(40, "Decoding audio and running Whisper speech recognition...", stageASR);
 
             await delay(900);
-            updateProgress(65, "Transcribing speech and analyzing conversational context...", stepASR);
+            setStep(70, "Processing conversational transcript with NLP summarizer...", stageNLP);
 
-            await delay(900);
-            updateProgress(85, "Running NLP summarizer and extracting key decisions...", stepNLP);
+            await delay(800);
+            setStep(90, "Extracting decisions, action items, assignees & deadlines...", stageStructure);
 
             const response = await uploadPromise;
-            const resData = await response.json();
+            const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(resData.error || "Failed to process audio.");
+                throw new Error(result.error || "Failed to process audio.");
             }
 
-            await delay(500);
-            updateProgress(95, "Structuring action items, assignees, and deadlines...", stepStructure);
-
             await delay(400);
-            updateProgress(100, "Meeting minutes successfully generated!", stepStructure, true);
+            setStep(100, "Meeting minutes successfully compiled!", stageStructure, true);
 
-            currentMeetingData = resData.data;
+            currentMeetingData = result.data;
 
-            // Render Results
             setTimeout(() => {
-                renderResults(currentMeetingData);
-                resultsWrapper.style.display = "block";
-                resultsWrapper.scrollIntoView({ behavior: "smooth" });
-                generateBtn.disabled = false;
-            }, 500);
+                renderMinutes(currentMeetingData);
+                minutesOutputContainer.style.display = "block";
+                minutesOutputContainer.scrollIntoView({ behavior: "smooth" });
+                startPipelineBtn.disabled = false;
+            }, 400);
 
-        } catch (error) {
-            console.error("Processing error:", error);
-            updateProgress(0, `Error: ${error.message}`);
-            progressBar.style.backgroundColor = "#ef4444";
-            generateBtn.disabled = false;
+        } catch (err) {
+            console.error("Execution error:", err);
+            setStep(0, `Error: ${err.message}`);
+            progressBarFill.style.backgroundColor = "#ef4444";
+            startPipelineBtn.disabled = false;
         }
     });
 
-    function updateProgress(percent, statusMessage, activeBadge = null, isComplete = false) {
-        progressBar.style.width = `${percent}%`;
-        progressPercent.textContent = `${percent}%`;
-        progressStatus.textContent = statusMessage;
+    function setStep(percent, statusMsg, activeNode = null, isFinal = false) {
+        progressBarFill.style.width = `${percent}%`;
+        progressPercentage.textContent = `${percent}%`;
+        currentStatusText.textContent = statusMsg;
 
-        if (activeBadge) {
-            document.querySelectorAll(".step-badge").forEach(badge => badge.classList.remove("active"));
-            activeBadge.classList.add(isComplete ? "completed" : "active");
+        if (activeNode) {
+            document.querySelectorAll(".step-node").forEach(node => {
+                if (node === activeNode) {
+                    node.classList.add(isFinal ? "completed" : "active");
+                } else if (node.compareDocumentPosition(activeNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                    node.classList.add("completed");
+                    node.classList.remove("active");
+                }
+            });
         }
     }
 
-    function renderResults(data) {
-        // Statistics
+    function resetStepper() {
+        progressBarFill.style.width = "0%";
+        progressBarFill.style.backgroundColor = "";
+        progressPercentage.textContent = "0%";
+        document.querySelectorAll(".step-node").forEach(n => {
+            n.classList.remove("active", "completed");
+        });
+        stageUpload.classList.add("active");
+    }
+
+    // -------------------------------------------------------------
+    // Data Rendering
+    // -------------------------------------------------------------
+    function renderMinutes(data) {
         const stats = data.statistics || {};
-        statDuration.textContent = stats.duration || "--";
-        statWordCount.textContent = stats.word_count || "--";
-        statDecisions.textContent = stats.decisions_count || "--";
-        statActionItems.textContent = stats.action_items_count || "--";
+        kpiDuration.textContent = stats.duration || "--";
+        kpiWordCount.textContent = stats.word_count || "--";
+        kpiDecisions.textContent = stats.decisions_count || "--";
+        kpiTasks.textContent = stats.action_items_count || "--";
 
         // Summary
-        summaryBox.textContent = data.summary || "No summary extracted.";
+        summaryContent.textContent = data.summary || "No summary available.";
 
         // Discussion Points
-        discussionList.innerHTML = "";
-        (data.discussion_points || []).forEach(point => {
+        discussionPointsList.innerHTML = "";
+        (data.discussion_points || []).forEach(pt => {
             const li = document.createElement("li");
-            li.textContent = point;
-            discussionList.appendChild(li);
+            li.textContent = pt;
+            discussionPointsList.appendChild(li);
         });
 
-        // Decisions Made
+        // Decisions
         decisionsList.innerHTML = "";
-        (data.decisions || []).forEach(decision => {
+        (data.decisions || []).forEach(dec => {
             const li = document.createElement("li");
-            li.textContent = decision;
+            li.textContent = dec;
             decisionsList.appendChild(li);
         });
 
-        // Action Items Table
-        actionItemsBody.innerHTML = "";
-        (data.action_items || []).forEach(item => {
-            const tr = document.createElement("tr");
-            const statusClass = item.status === "In Progress" ? "badge-progress" : "badge-pending";
-
-            tr.innerHTML = `
-                <td><strong>${escapeHtml(item.task)}</strong></td>
-                <td>${escapeHtml(item.assignee || "Unassigned")}</td>
-                <td>${escapeHtml(item.deadline || "None")}</td>
-                <td><span class="badge ${statusClass}">${escapeHtml(item.status || "Pending")}</span></td>
-            `;
-            actionItemsBody.appendChild(tr);
-        });
+        // Action items table
+        renderActionTable(data.action_items || []);
 
         // Transcript
-        transcriptBox.textContent = data.transcript || "No transcript available.";
+        rawTranscriptText.textContent = data.transcript || "No transcript available.";
     }
 
-    // Copy Transcript
-    copyTranscriptBtn.addEventListener("click", () => {
-        if (!transcriptBox.textContent) return;
-        navigator.clipboard.writeText(transcriptBox.textContent).then(() => {
-            copyTranscriptBtn.textContent = "Copied!";
-            setTimeout(() => {
-                copyTranscriptBtn.textContent = "Copy Text";
-            }, 2000);
+    function renderActionTable(items) {
+        actionTableBody.innerHTML = "";
+        items.forEach((item, index) => {
+            appendTableRow(item.task, item.assignee, item.deadline, item.status);
+        });
+    }
+
+    function appendTableRow(task = "New Task", assignee = "Unassigned", deadline = "None", status = "Pending") {
+        const tr = document.createElement("tr");
+        const statusClass = status === "In Progress" ? "status-in-progress" : (status === "Completed" ? "status-done" : "status-pending");
+
+        tr.innerHTML = `
+            <td class="editable-cell" contenteditable="true">${escapeHtml(task)}</td>
+            <td class="editable-cell" contenteditable="true">${escapeHtml(assignee)}</td>
+            <td class="editable-cell" contenteditable="true">${escapeHtml(deadline)}</td>
+            <td>
+                <span class="status-pill ${statusClass}">${escapeHtml(status)}</span>
+            </td>
+            <td style="text-align: center;">
+                <button type="button" class="btn-icon-danger delete-row-btn" title="Delete item">&times;</button>
+            </td>
+        `;
+
+        tr.querySelector(".delete-row-btn").addEventListener("click", () => {
+            tr.remove();
+            updateTaskCount();
+        });
+
+        actionTableBody.appendChild(tr);
+        updateTaskCount();
+    }
+
+    addRowBtn.addEventListener("click", () => {
+        appendTableRow("Describe action item...", "Name", "Date/Time", "Pending");
+    });
+
+    function updateTaskCount() {
+        kpiTasks.textContent = actionTableBody.querySelectorAll("tr").length;
+    }
+
+    // -------------------------------------------------------------
+    // Tabs Navigation
+    // -------------------------------------------------------------
+    tabButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            tabButtons.forEach(b => b.classList.remove("active"));
+            tabContents.forEach(c => c.classList.remove("active"));
+
+            btn.classList.add("active");
+            const targetId = btn.getAttribute("data-tab");
+            document.getElementById(targetId).classList.add("active");
         });
     });
 
-    // Export PDF
-    pdfBtn.addEventListener("click", () => {
-        window.location.href = "/export/pdf";
+    // -------------------------------------------------------------
+    // Search in Transcript
+    // -------------------------------------------------------------
+    transcriptSearch.addEventListener("input", (e) => {
+        const query = e.target.value.toLowerCase();
+        const text = rawTranscriptText.textContent;
+        if (!query) {
+            rawTranscriptText.textContent = text;
+            return;
+        }
     });
 
-    // Export DOCX
-    docxBtn.addEventListener("click", () => {
-        window.location.href = "/export/docx";
+    copyTranscriptOnlyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(rawTranscriptText.textContent).then(() => {
+            copyTranscriptOnlyBtn.textContent = "Copied!";
+            setTimeout(() => { copyTranscriptOnlyBtn.textContent = "Copy Text"; }, 2000);
+        });
+    });
+
+    // -------------------------------------------------------------
+    // Live Edited Document Export (PDF & DOCX)
+    // -------------------------------------------------------------
+    function collectCurrentLiveMinutes() {
+        const discussionPoints = [];
+        discussionPointsList.querySelectorAll("li").forEach(li => {
+            if (li.textContent.trim()) discussionPoints.push(li.textContent.trim());
+        });
+
+        const decisions = [];
+        decisionsList.querySelectorAll("li").forEach(li => {
+            if (li.textContent.trim()) decisions.push(li.textContent.trim());
+        });
+
+        const actionItems = [];
+        actionTableBody.querySelectorAll("tr").forEach(tr => {
+            const cells = tr.querySelectorAll("td");
+            if (cells.length >= 4) {
+                actionItems.push({
+                    task: cells[0].textContent.trim(),
+                    assignee: cells[1].textContent.trim(),
+                    deadline: cells[2].textContent.trim(),
+                    status: cells[3].textContent.trim()
+                });
+            }
+        });
+
+        return {
+            filename: fileNameDisplay.textContent || "meeting_minutes",
+            statistics: {
+                duration: kpiDuration.textContent,
+                word_count: kpiWordCount.textContent,
+                decisions_count: decisions.length,
+                action_items_count: actionItems.length
+            },
+            summary: summaryContent.textContent.trim(),
+            discussion_points: discussionPoints,
+            decisions: decisions,
+            action_items: actionItems,
+            transcript: rawTranscriptText.textContent.trim()
+        };
+    }
+
+    async function triggerExport(format) {
+        const liveData = collectCurrentLiveMinutes();
+        const btn = format === "pdf" ? exportPdfBtn : exportDocxBtn;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "Generating...";
+
+        try {
+            const response = await fetch(`/export/${format}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(liveData)
+            });
+
+            if (!response.ok) throw new Error("Export failed.");
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            a.download = `meeting_minutes.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+            alert(`Could not export ${format.toUpperCase()}: ${err.message}`);
+        } finally {
+            btn.innerHTML = originalText;
+        }
+    }
+
+    exportPdfBtn.addEventListener("click", () => triggerExport("pdf"));
+    exportDocxBtn.addEventListener("click", () => triggerExport("docx"));
+
+    copyAllMinutesBtn.addEventListener("click", () => {
+        const data = collectCurrentLiveMinutes();
+        let formatted = `MINUTES OF MEETING\nFile: ${data.filename}\nDuration: ${data.statistics.duration}\n\n1. EXECUTIVE SUMMARY\n${data.summary}\n\n2. KEY DISCUSSION POINTS\n`;
+        data.discussion_points.forEach(p => formatted += `• ${p}\n`);
+        formatted += `\n3. DECISIONS MADE\n`;
+        data.decisions.forEach(d => formatted += `• ${d}\n`);
+        formatted += `\n4. ACTION ITEMS\n`;
+        data.action_items.forEach(a => formatted += `• [${a.status}] ${a.task} - Assignee: ${a.assignee} (Due: ${a.deadline})\n`);
+
+        navigator.clipboard.writeText(formatted).then(() => {
+            copyAllMinutesBtn.textContent = "Copied!";
+            setTimeout(() => { copyAllMinutesBtn.textContent = "Copy All"; }, 2000);
+        });
     });
 
     function delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    function escapeHtml(text) {
-        if (!text) return "";
+    function escapeHtml(str) {
+        if (!str) return "";
         const div = document.createElement("div");
-        div.textContent = text;
+        div.textContent = str;
         return div.innerHTML;
     }
 });

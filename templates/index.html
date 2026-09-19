@@ -4,170 +4,270 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Meeting Minutes Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Top Navigation / Header -->
-        <header class="navbar">
-            <div class="brand">
-                <h1>AI Meeting Minutes Generator</h1>
-                <p>Automated Speech Recognition, Summarization, and Action Items Extraction</p>
+    <div class="app-layout">
+        <!-- Top Navigation Bar -->
+        <header class="top-nav">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <div class="brand-info">
+                    <h1>AI Meeting Minutes Generator</h1>
+                    <p>Automated Speech-to-Text, Abstractive Summarization & Action Item Extraction</p>
+                </div>
             </div>
-            <div class="system-status">
-                <span class="status-indicator"></span> System Ready
+            <div class="nav-meta">
+                <div class="system-badge">
+                    <span class="pulse-dot"></span>
+                    <span>System Operational</span>
+                </div>
             </div>
         </header>
 
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <!-- Upload Card -->
-            <section class="card upload-card">
-                <div class="card-header">
-                    <h2>Upload Meeting Recording</h2>
-                    <span class="card-subtext">Supported formats: MP3, WAV, M4A, MP4 (Max: 100 MB)</span>
+        <main class="content-container">
+            <!-- Audio Upload & Processing Card -->
+            <section class="panel upload-panel">
+                <div class="panel-header">
+                    <h2>Meeting Audio Ingestion</h2>
+                    <span class="file-badges">MP3 &bull; WAV &bull; M4A &bull; MP4</span>
                 </div>
-                <div class="card-body">
+                
+                <div class="panel-body">
                     <div class="dropzone" id="dropZone">
-                        <input type="file" id="meetingFile" accept="audio/*,video/*">
-                        <div class="dropzone-prompt">
-                            <p class="primary-text">Click to browse or drag and drop audio/video file here</p>
-                            <p class="secondary-text" id="selectedFileName">No file selected</p>
+                        <input type="file" id="meetingFileInput" accept="audio/*,video/*">
+                        <div class="dropzone-content">
+                            <svg class="upload-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p class="dropzone-main-text">Drag and drop meeting recording here, or <span class="browse-link">browse files</span></p>
+                            <p class="dropzone-sub-text">Standard recordings, voice memos, and video meeting exports up to 100 MB</p>
                         </div>
                     </div>
 
-                    <div class="action-bar">
-                        <button type="button" id="generateBtn" class="btn btn-primary" disabled>
-                            Generate Minutes
+                    <!-- Selected File Info & Audio Player -->
+                    <div id="fileDetailsBar" class="file-details-bar" style="display: none;">
+                        <div class="file-meta">
+                            <div class="file-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                </svg>
+                            </div>
+                            <div class="file-meta-text">
+                                <span class="file-name" id="fileNameDisplay">recording.mp3</span>
+                                <span class="file-size" id="fileSizeDisplay">-- MB</span>
+                            </div>
+                        </div>
+                        
+                        <div class="audio-player-wrapper">
+                            <audio id="audioPreview" controls preload="metadata"></audio>
+                        </div>
+                    </div>
+
+                    <div class="control-actions">
+                        <button type="button" id="startPipelineBtn" class="btn btn-primary" disabled>
+                            Generate Meeting Minutes
                         </button>
-                        <button type="button" id="resetBtn" class="btn btn-secondary" style="display: none;">
-                            Clear
+                        <button type="button" id="clearFileBtn" class="btn btn-outline" style="display: none;">
+                            Reset File
                         </button>
                     </div>
 
-                    <!-- Progress Section (Dynamic Percentage) -->
-                    <div id="progressSection" class="progress-section" style="display: none;">
-                        <div class="progress-header">
-                            <span id="progressStatus" class="progress-status">Uploading recording...</span>
-                            <span id="progressPercent" class="progress-percent">0%</span>
+                    <!-- Dynamic Stepper Progress Section -->
+                    <div id="pipelineProgress" class="pipeline-progress" style="display: none;">
+                        <div class="progress-info-row">
+                            <span id="currentStatusText" class="current-status">Initializing audio pipeline...</span>
+                            <span id="progressPercentage" class="progress-percent">0%</span>
                         </div>
-                        <div class="progress-bar-container">
-                            <div id="progressBar" class="progress-bar" style="width: 0%;"></div>
+                        
+                        <div class="progress-track">
+                            <div id="progressBarFill" class="progress-fill" style="width: 0%;"></div>
                         </div>
-                        <div class="progress-steps">
-                            <span class="step-badge" id="stepUpload">Upload</span>
-                            <span class="step-badge" id="stepASR">ASR Transcription</span>
-                            <span class="step-badge" id="stepNLP">AI Summarization</span>
-                            <span class="step-badge" id="stepStructure">Extraction</span>
+
+                        <div class="stepper-stages">
+                            <div class="step-node active" id="stageUpload">
+                                <div class="step-circle">1</div>
+                                <span class="step-label">Upload</span>
+                            </div>
+                            <div class="step-node" id="stageASR">
+                                <div class="step-circle">2</div>
+                                <span class="step-label">Whisper ASR</span>
+                            </div>
+                            <div class="step-node" id="stageNLP">
+                                <div class="step-circle">3</div>
+                                <span class="step-label">Summarization</span>
+                            </div>
+                            <div class="step-node" id="stageStructure">
+                                <div class="step-circle">4</div>
+                                <span class="step-label">Minutes Extraction</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Results Section (Hidden until generated) -->
-            <div id="resultsWrapper" style="display: none;">
-                <!-- Meeting Statistics Bar -->
-                <section class="stats-grid">
-                    <div class="stat-card">
-                        <span class="stat-label">Meeting Duration</span>
-                        <span class="stat-value" id="statDuration">--</span>
+            <!-- Dashboard Output Area (Appears after generation) -->
+            <div id="minutesOutputContainer" class="minutes-container" style="display: none;">
+                <!-- Executive Statistics Bar -->
+                <section class="stats-overview">
+                    <div class="kpi-card">
+                        <span class="kpi-title">Audio Duration</span>
+                        <span class="kpi-value" id="kpiDuration">--</span>
                     </div>
-                    <div class="stat-card">
-                        <span class="stat-label">Word Count</span>
-                        <span class="stat-value" id="statWordCount">--</span>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Transcript Words</span>
+                        <span class="kpi-value" id="kpiWordCount">--</span>
                     </div>
-                    <div class="stat-card">
-                        <span class="stat-label">Decisions Logged</span>
-                        <span class="stat-value" id="statDecisions">--</span>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Decisions Logged</span>
+                        <span class="kpi-value" id="kpiDecisions">--</span>
                     </div>
-                    <div class="stat-card">
-                        <span class="stat-label">Action Items</span>
-                        <span class="stat-value" id="statActionItems">--</span>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Action Items</span>
+                        <span class="kpi-value" id="kpiTasks">--</span>
                     </div>
                 </section>
 
-                <!-- Export Bar -->
-                <div class="export-strip">
-                    <span class="export-title">Export Options:</span>
-                    <button type="button" id="pdfBtn" class="btn btn-export">
-                        Download PDF
-                    </button>
-                    <button type="button" id="docxBtn" class="btn btn-export">
-                        Download DOCX
-                    </button>
+                <!-- Document Export & Actions Toolbar -->
+                <div class="export-toolbar">
+                    <div class="toolbar-heading">
+                        <span class="toolbar-label">Export Minutes:</span>
+                        <span class="toolbar-hint">Downloads reflect your live edits below</span>
+                    </div>
+                    <div class="toolbar-buttons">
+                        <button type="button" id="exportPdfBtn" class="btn btn-export">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download PDF
+                        </button>
+                        <button type="button" id="exportDocxBtn" class="btn btn-export">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            Download DOCX
+                        </button>
+                        <button type="button" id="copyAllMinutesBtn" class="btn btn-export">
+                            Copy All
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Executive Summary -->
-                <section class="card result-card">
-                    <div class="card-header">
-                        <h2>1. Executive Summary</h2>
-                        <span class="hint-tag">Editable</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="summaryBox" class="content-box editable" contenteditable="true"></div>
-                    </div>
-                </section>
+                <!-- Tab Navigation -->
+                <div class="tabs-nav">
+                    <button type="button" class="tab-btn active" data-tab="tabMinutes">Structured Minutes</button>
+                    <button type="button" class="tab-btn" data-tab="tabTranscript">Full Transcript</button>
+                </div>
 
-                <!-- Key Discussion Points -->
-                <section class="card result-card">
-                    <div class="card-header">
-                        <h2>2. Key Discussion Points</h2>
-                        <span class="hint-tag">Editable</span>
-                    </div>
-                    <div class="card-body">
-                        <ul id="discussionList" class="bullet-list editable" contenteditable="true"></ul>
-                    </div>
-                </section>
-
-                <!-- Decisions Made -->
-                <section class="card result-card">
-                    <div class="card-header">
-                        <h2>3. Decisions Made</h2>
-                        <span class="hint-tag">Editable</span>
-                    </div>
-                    <div class="card-body">
-                        <ul id="decisionsList" class="decision-list editable" contenteditable="true"></ul>
-                    </div>
-                </section>
-
-                <!-- Action Items Table -->
-                <section class="card result-card">
-                    <div class="card-header">
-                        <h2>4. Action Items & Assignments</h2>
-                        <span class="hint-tag">Structured</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="data-table" id="actionItemsTable">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 50%;">Task Description</th>
-                                        <th style="width: 20%;">Assignee</th>
-                                        <th style="width: 15%;">Deadline</th>
-                                        <th style="width: 15%;">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="actionItemsBody"></tbody>
-                            </table>
+                <!-- Tab 1: Structured Minutes -->
+                <div id="tabMinutes" class="tab-content active">
+                    <!-- Section 1: Executive Summary -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title-wrap">
+                                <h3>1. Executive Summary</h3>
+                                <span class="tag-badge">Editable</span>
+                            </div>
+                        </div>
+                        <div class="section-body">
+                            <div id="summaryContent" class="text-editor" contenteditable="true"></div>
                         </div>
                     </div>
-                </section>
 
-                <!-- Transcript Section -->
-                <section class="card result-card">
-                    <div class="card-header">
-                        <h2>5. Full Transcript</h2>
-                        <button type="button" id="copyTranscriptBtn" class="btn btn-sm">Copy Text</button>
+                    <!-- Section 2: Key Discussion Points -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title-wrap">
+                                <h3>2. Key Discussion Points</h3>
+                                <span class="tag-badge">Editable</span>
+                            </div>
+                        </div>
+                        <div class="section-body">
+                            <ul id="discussionPointsList" class="styled-list" contenteditable="true"></ul>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div id="transcriptBox" class="transcript-box"></div>
+
+                    <!-- Section 3: Decisions Made -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title-wrap">
+                                <h3>3. Decisions Made</h3>
+                                <span class="tag-badge">Editable</span>
+                            </div>
+                        </div>
+                        <div class="section-body">
+                            <ul id="decisionsList" class="decision-bullets" contenteditable="true"></ul>
+                        </div>
                     </div>
-                </section>
+
+                    <!-- Section 4: Action Items Table -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title-wrap">
+                                <h3>4. Action Items & Assignments</h3>
+                                <span class="tag-badge tag-highlight">Structured</span>
+                            </div>
+                            <button type="button" id="addRowBtn" class="btn btn-sm btn-outline">+ Add Action Item</button>
+                        </div>
+                        <div class="section-body">
+                            <div class="table-container">
+                                <table class="action-table" id="actionItemsTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 45%;">Task Description</th>
+                                            <th style="width: 20%;">Assignee</th>
+                                            <th style="width: 15%;">Deadline</th>
+                                            <th style="width: 12%;">Status</th>
+                                            <th style="width: 8%; text-align: center;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="actionTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Full Transcript -->
+                <div id="tabTranscript" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title-wrap">
+                                <h3>Full Audio Transcript</h3>
+                                <span class="tag-badge">Whisper Output</span>
+                            </div>
+                            <div class="transcript-actions">
+                                <input type="text" id="transcriptSearch" class="search-input" placeholder="Search transcript...">
+                                <button type="button" id="copyTranscriptOnlyBtn" class="btn btn-sm btn-outline">Copy Text</button>
+                            </div>
+                        </div>
+                        <div class="section-body">
+                            <div id="rawTranscriptText" class="transcript-viewport"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
 
-        <footer class="footer">
-            <p>AI Meeting Minutes Generator &copy; 2026. Built with Whisper, Transformers, and Flask.</p>
+        <footer class="app-footer">
+            <p>AI Meeting Minutes Generator &bull; Designed for Audio Transcription & Summarization</p>
         </footer>
     </div>
 
