@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Meeting Minutes Generator</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <header>
+            <h1>AI Meeting Minutes Generator</h1>
+            <p>
+                Convert your meeting recordings into structured,
+                AI-generated meeting minutes.
+            </p>
+        </header>
+
+
+        <section class="upload-section">
+
+            <h2>Upload Meeting Recording</h2>
+
+            <input type="file" id="meetingFile" accept="audio/*,video/*">
+
+            <button id="generateBtn">
+                Generate Minutes
+            </button>
+
+            <p id="fileName"></p>
+
+        </section>
+
+
+        <section class="result-section">
+
+            <h2>Transcript</h2>
+
+            <div id="transcript" class="result-box">
+                Your transcript will appear here.
+            </div>
+
+        </section>
+
+
+        <section class="result-section">
+
+            <h2>Meeting Summary</h2>
+
+            <div id="summary" class="result-box">
+                Your meeting summary will appear here.
+            </div>
+
+        </section>
+
+
+        <section class="result-section">
+
+            <h2>Key Discussion Points</h2>
+
+            <div id="discussion" class="result-box">
+                Key discussion points will appear here.
+            </div>
+
+        </section>
+
+
+        <section class="result-section">
+
+            <h2>Decisions</h2>
+
+            <div id="decisions" class="result-box">
+                Decisions from the meeting will appear here.
+            </div>
+
+        </section>
+
+
+        <section class="result-section">
+
+            <h2>Action Items</h2>
+
+            <div id="actionItems" class="result-box">
+                Action items will appear here.
+            </div>
+
+        </section>
+
+
+        <section class="download-section">
+
+            <button id="pdfBtn">
+                Download PDF
+            </button>
+
+            <button id="docxBtn">
+                Download DOCX
+            </button>
+
+        </section>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+
+</html>

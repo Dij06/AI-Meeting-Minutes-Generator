@@ -1,0 +1,57 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+}
+
+.container {
+    width: 80%;
+    max-width: 1000px;
+    margin: 40px auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    margin-bottom: 10px;
+}
+
+.upload-section,
+.result-section,
+.download-section {
+    background: white;
+    padding: 25px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+}
+
+.upload-section {
+    text-align: center;
+}
+
+input[type="file"] {
+    margin: 15px;
+}
+
+button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+.result-box {
+    min-height: 100px;
+    padding: 15px;
+    background-color: #f8f8f8;
+    border-radius: 6px;
+}
+
+.download-section {
+    text-align: center;
+}
