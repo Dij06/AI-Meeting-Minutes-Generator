@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meetly - AI Meeting Minutes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        // Check saved theme or system preference on load to prevent flash
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // Apply saved accent color immediately on boot
+        const savedAccentKey = localStorage.getItem('meetly_accent_color') || 'blue';
+        const accentPalettes = {
+            'blue': { main: '#2563eb', hover: '#1d4ed8', light: '#eff6ff', shadow: 'rgba(37, 99, 235, 0.25)', ring: 'rgba(37, 99, 235, 0.45)' },
+            'indigo': { main: '#4f46e5', hover: '#4338ca', light: '#eef2ff', shadow: 'rgba(79, 70, 229, 0.25)', ring: 'rgba(79, 70, 229, 0.45)' },
+            'purple': { main: '#9333ea', hover: '#7e22ce', light: '#faf5ff', shadow: 'rgba(147, 51, 234, 0.25)', ring: 'rgba(147, 51, 234, 0.45)' },
+            'emerald': { main: '#059669', hover: '#047857', light: '#ecfdf5', shadow: 'rgba(5, 150, 105, 0.25)', ring: 'rgba(5, 150, 105, 0.45)' },
+            'rose': { main: '#e11d48', hover: '#be123c', light: '#fff1f2', shadow: 'rgba(225, 29, 72, 0.25)', ring: 'rgba(225, 29, 72, 0.45)' }
+        };
+        const activePalette = accentPalettes[savedAccentKey] || accentPalettes['blue'];
+        document.documentElement.style.setProperty('--theme-accent', activePalette.main);
+        document.documentElement.style.setProperty('--theme-accent-hover', activePalette.hover);
+        document.documentElement.style.setProperty('--theme-accent-light', activePalette.light);
+        document.documentElement.style.setProperty('--theme-accent-shadow', activePalette.shadow);
+        document.documentElement.style.setProperty('--theme-accent-ring', activePalette.ring);
+        document.documentElement.setAttribute('data-accent', savedAccentKey);
+    </script>
+    <style>
+        :root {
+            --theme-accent: #2563eb;
+            --theme-accent-hover: #1d4ed8;
+            --theme-accent-light: #eff6ff;
+            --theme-accent-shadow: rgba(37, 99, 235, 0.25);
+            --theme-accent-ring: rgba(37, 99, 235, 0.45);
+        }
+
+        *, body, input, button, select, textarea, h1, h2, h3, h4, h5, h6, p, span, label, div {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        }
+
+        /* Dynamic theme accent helpers */
+        .sidebar-nav-item.active {
+            background-color: var(--theme-accent, #2563eb) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px var(--theme-accent-shadow, rgba(37, 99, 235, 0.25)) !important;
+        }
+        .sidebar-nav-item.active svg {
+            color: #ffffff !important;
+        }
+        .theme-pill.active {
+            background-color: var(--theme-accent, #2563eb) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px var(--theme-accent-shadow, rgba(37, 99, 235, 0.25)) !important;
+        }
+        .theme-btn-primary,
+        .btn-theme-accent {
+            background-color: var(--theme-accent, #2563eb) !important;
+            color: #ffffff !important;
+        }
+        .theme-btn-primary:hover,
+        .btn-theme-accent:hover {
+            background-color: var(--theme-accent-hover, #1d4ed8) !important;
+        }
+        .theme-accent-text,
+        .text-theme-accent {
+            color: var(--theme-accent, #2563eb) !important;
+        }
+        .theme-accent-border,
+        .border-theme-accent {
+            border-color: var(--theme-accent, #2563eb) !important;
+        }
+        .avatar-accent {
+            background-color: var(--theme-accent, #2563eb) !important;
+        }
+        .audio-accent-bar {
+            background-color: var(--theme-accent, #2563eb) !important;
+        }
+
+        /* Stepper states for pipeline progress */
+        .step-node .step-indicator {
+            transition: all 0.3s ease;
+        }
+        .step-node.active .step-indicator {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        .step-node.active .step-label {
+            color: #2563eb;
+            font-weight: 700;
+        }
+        .step-node.completed .step-indicator {
+            background-color: #10b981;
+            color: #ffffff;
+            border-color: #10b981;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+        .step-node.completed .step-label {
+            color: #059669;
+        }
+
+        /* View switching */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        /* Action item status badge pills */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 9999px;
+            letter-spacing: 0.02em;
+        }
+        .status-done {
+            background-color: #ecfdf5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+        .dark .status-done {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .status-in-progress {
+            background-color: #fffbeb;
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+        .dark .status-in-progress {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .status-pending {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .dark .status-pending {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Contenteditable cells with subtle focus outline */
+        .editable-cell {
+            outline: none;
+            padding: 8px 10px;
+            border-radius: 6px;
+            transition: background 0.15s ease;
+        }
+        .editable-cell:focus {
+            background: #eff6ff;
+            outline: 2px solid #bfdbfe;
+        }
+        .dark .editable-cell:focus {
+            background: rgba(255, 255, 255, 0.08);
+            outline: 1px solid #818cf8;
+        }
+
+        .btn-icon-danger {
+            color: #ef4444;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.15s ease;
+        }
+        .btn-icon-danger:hover {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .dark .btn-icon-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .dragover {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+        }
+        .dark .dragover {
+            background-color: rgba(37, 99, 235, 0.15) !important;
+        }
+
+        /* Animated waveform equalizer bars */
+        @keyframes waveformBounce {
+            0%, 100% {
+                height: 8px;
+                opacity: 0.35;
+            }
+            50% {
+                height: 38px;
+                opacity: 1;
+            }
+        }
+        .waveform-bar {
+            width: 4px;
+            background: linear-gradient(180deg, #3b82f6 0%, #6366f1 100%);
+            border-radius: 9999px;
+            animation: waveformBounce 1.2s ease-in-out infinite alternate;
+        }
+
+        /* Custom scrollbar for transcripts and lists */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.3);
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(156, 163, 175, 0.5);
+        }
+
+        /* Active utterance pulse highlight during audio playback */
+        .utterance-bubble.active-playback {
+            border-color: #3b82f6 !important;
+            border-left-width: 4px !important;
+            border-left-color: #3b82f6 !important;
+            background-color: rgba(59, 130, 246, 0.09) !important;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Action item task strike-through transition */
+        .task-completed .task-text {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        /* Smooth card hover transitions */
+        .workspace-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .workspace-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+        }
+        .dark .workspace-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-[#f8fafc] dark:bg-[#090d16] text-slate-900 dark:text-slate-100 font-sans min-h-screen flex antialiased transition-colors duration-200">
+
+    <!-- STUCK LEFT SIDEBAR: Sticky to viewport, never scrolls with content -->
+    <aside class="sticky top-0 h-screen w-64 shrink-0 bg-white dark:bg-[#0d121f] border-r border-slate-200/80 dark:border-slate-800 flex flex-col justify-between p-4 z-30 select-none">
+        <div class="space-y-6">
+            <!-- Brand Logo -->
+            <div class="px-2 pt-1">
+                <a href="/" class="flex items-center gap-2 group">
+                    <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold text-sm shadow-sm group-hover:scale-105 transition">
+                        M
+                    </div>
+                    <span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Meetly</span>
+                    <span class="text-[10px] font-semibold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80 px-1.5 py-0.5 rounded-md ml-0.5">Minutes AI</span>
+                </a>
+            </div>
+
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1">
+                <button type="button" data-view="viewDashboard" class="sidebar-nav-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    <span>Dashboard</span>
+                </button>
+                <button type="button" data-view="viewMeetings" class="sidebar-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    <span>Meetings</span>
+                </button>
+                <button type="button" data-view="viewAnalytics" class="sidebar-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    <span>Analytics</span>
+                </button>
+                <button type="button" data-view="viewSettings" class="sidebar-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span>Settings</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- User Profile Card at Bottom of Sidebar -->
+        <div class="pt-4 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-1">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+                <div id="sidebarUserAvatar" class="avatar-accent w-8 h-8 rounded-full text-white font-bold flex items-center justify-center text-xs shadow-sm transition-colors shrink-0" style="background-color: var(--theme-accent) !important">
+                    <span>{{ (user.name or 'G')[0] }}</span>
+                </div>
+                <div class="overflow-hidden">
+                    <p id="sidebarUserName" class="text-xs font-semibold text-slate-900 dark:text-white truncate">{{ user.name or 'Guest User' }}</p>
+                    <p class="text-[11px] text-slate-400 truncate">{{ user.email or 'guest@demo.com' }}</p>
+                </div>
+            </div>
+            <a href="/logout" title="Sign out" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </a>
+        </div>
+    </aside>
+
+    <!-- RIGHT SIDE: FULL SCREEN CONTENT WRAPPER -->
+    <div class="flex-1 flex flex-col min-w-0 w-full min-h-screen">
+        <!-- Top App Bar: View Title on left, Theme Toggle and Guest User on right -->
+        <header id="workspaceTopNav" class="h-16 border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0d121f] px-6 sm:px-10 flex items-center justify-between sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <h2 id="topNavViewTitle" class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Dashboard</h2>
+            </div>
+            <div class="flex items-center gap-3 sm:gap-4">
+                <!-- Theme toggle button in top right side -->
+                <button id="themeToggleBtn" type="button" aria-label="Toggle theme" class="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer shadow-xs">
+                    <svg class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg class="w-4 h-4 block dark:hidden text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                </button>
+
+                <!-- Guest User profile in top right -->
+                <div class="flex items-center gap-2.5 pl-3 border-l border-slate-200 dark:border-slate-800">
+                    <div id="headerUserAvatar" class="avatar-accent w-8 h-8 rounded-full text-white font-bold flex items-center justify-center text-xs shadow-sm transition-colors shrink-0" style="background-color: var(--theme-accent) !important">
+                        <span>{{ (user.name or 'G')[0] }}</span>
+                    </div>
+                    <span id="headerUserName" class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">{{ user.name or 'Guest User' }}</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Full-Screen Layout (Edge-to-edge content) -->
+        <main class="flex-1 w-full px-6 sm:px-10 lg:px-12 py-8 min-w-0">
+
+            <!-- Primary Dashboard Overview -->
+            <section id="viewDashboard" class="dashboard-view space-y-6 sm:space-y-8">
+                <div>
+                    <h1 id="dynamicGreeting" class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Good evening, {{ user.name or 'User' }}
+                    </h1>
+                    <p class="mt-1 text-slate-500 dark:text-slate-400 text-xs sm:text-base font-normal">
+                        Turn your meetings into actionable work.
+                    </p>
+                </div>
+
+                <!-- 3 Metric Cards: Meetings, Minutes, Actions -->
+                <div class="grid grid-cols-3 gap-2.5 sm:gap-5">
+                    <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm text-center sm:text-left">
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 block truncate">Total Meetings</span>
+                        <div class="mt-1 sm:mt-3 text-xl sm:text-3xl font-black text-slate-900 dark:text-white">24</div>
+                    </div>
+                    <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm text-center sm:text-left">
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 block truncate">Meeting Minutes</span>
+                        <div class="mt-1 sm:mt-3 text-xl sm:text-3xl font-black text-slate-900 dark:text-white">21</div>
+                    </div>
+                    <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm text-center sm:text-left">
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 block truncate">Action Items</span>
+                        <div class="mt-1 sm:mt-3 text-xl sm:text-3xl font-black text-slate-900 dark:text-white">38</div>
+                    </div>
+                </div>
+
+                <!-- Recent Meetings List -->
+                <div class="mt-8 sm:mt-10">
+                    <div class="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-200 dark:border-slate-800 gap-2">
+                        <h2 class="text-sm sm:text-lg font-bold text-slate-900 dark:text-white">Recent Meetings</h2>
+                        <button type="button" id="dashboardNewMeetingBtn" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl shadow-sm transition shrink-0">
+                            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span>New Meeting</span>
+                        </button>
+                    </div>
+
+                    <div class="divide-y divide-slate-100 dark:divide-slate-800/80 mt-1">
+                        <div class="recent-meeting-item py-3.5 sm:py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 px-2 sm:px-3 rounded-xl transition cursor-pointer group" data-meeting="demo">
+                            <div class="overflow-hidden mr-2">
+                                <span class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 transition block truncate">Project Discussion</span>
+                            </div>
+                            <div class="flex items-center gap-4 sm:gap-8 text-xs sm:text-sm text-slate-400 shrink-0">
+                                <span>Today</span>
+                                <span class="text-slate-400 group-hover:text-blue-600 transition font-bold">&rarr;</span>
+                            </div>
+                        </div>
+                        <div class="recent-meeting-item py-3.5 sm:py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 px-2 sm:px-3 rounded-xl transition cursor-pointer group" data-meeting="demo">
+                            <div class="overflow-hidden mr-2">
+                                <span class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 transition block truncate">Team Meeting</span>
+                            </div>
+                            <div class="flex items-center gap-4 sm:gap-8 text-xs sm:text-sm text-slate-400 shrink-0">
+                                <span>Yesterday</span>
+                                <span class="text-slate-400 group-hover:text-blue-600 transition font-bold">&rarr;</span>
+                            </div>
+                        </div>
+                        <div class="recent-meeting-item py-3.5 sm:py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 px-2 sm:px-3 rounded-xl transition cursor-pointer group" data-meeting="demo">
+                            <div class="overflow-hidden mr-2">
+                                <span class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 transition block truncate">Client Discussion</span>
+                            </div>
+                            <div class="flex items-center gap-4 sm:gap-8 text-xs sm:text-sm text-slate-400 shrink-0">
+                                <span>18 Sep</span>
+                                <span class="text-slate-400 group-hover:text-blue-600 transition font-bold">&rarr;</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Meeting Ingestion & Results Workspace -->
+            <section id="viewWorkspace" class="dashboard-view hidden space-y-6 sm:space-y-8">
+                <div id="workspaceTopNav" class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+                    <button type="button" id="backToDashboardBtn" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        <span>Back to Dashboard</span>
+                    </button>
+                    <span class="text-xs text-slate-400 hidden sm:inline">Meeting Workspace</span>
+                </div>
+
+                <!-- Initial State: Upload / Record / Configure -->
+                <div id="uploadInitialState" class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-10 shadow-sm max-w-2xl mx-auto">
+                    <!-- Header -->
+                    <div class="text-center mb-6 sm:mb-8">
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">New Meeting</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Upload your recording</p>
+                    </div>
+
+                    <!-- Dashed Drag & Drop Box -->
+                    <div id="dropZone" class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl p-8 sm:p-10 text-center transition cursor-pointer relative group">
+                        <input type="file" id="meetingFileInput" accept="audio/*,video/*" class="sr-only">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-200">Drag &amp; drop your meeting recording</p>
+                            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-4">MP3 &bull; WAV &bull; M4A</p>
+                            <button type="button" id="browseFilesBtn" class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition hover:bg-slate-50 dark:hover:bg-slate-700/60">
+                                Browse Files
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- File preview summary if selected on initial screen -->
+                    <div id="selectedFileSummary" class="mt-4 p-3.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 rounded-xl flex items-center justify-between" style="display: none;">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                            </div>
+                            <div class="overflow-hidden">
+                                <p id="initialFileName" class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">recording.mp3</p>
+                                <p id="initialFileSize" class="text-xs text-slate-500 dark:text-slate-400">-- MB</p>
+                            </div>
+                        </div>
+                        <button type="button" id="removeSelectedFileBtn" class="text-xs text-slate-500 hover:text-rose-500 font-medium px-2 py-1 transition shrink-0">
+                            Remove
+                        </button>
+                    </div>
+
+                    <!-- OR Divider -->
+                    <div class="relative flex items-center justify-center my-6">
+                        <div class="border-t border-slate-200 dark:border-slate-800 w-full"></div>
+                        <span class="bg-white dark:bg-[#0d121f] px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 absolute">OR</span>
+                    </div>
+
+                    <!-- Record Meeting Button & Live State -->
+                    <div class="flex flex-col items-center justify-center">
+                        <button type="button" id="recordMeetingBtn" class="w-full sm:w-auto px-6 py-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700/80 shadow-sm">
+                            <svg id="recordMicSvg" class="w-4 h-4 text-slate-600 dark:text-slate-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m14 0a7 7 0 01-14 0m7 7v4m-4 0h8m-4-11a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z"/></svg>
+                            <span id="recordBtnText">Record Meeting</span>
+                        </button>
+                        <div id="recordingLiveStatus" class="mt-3 flex items-center gap-2 text-xs text-rose-500 font-medium" style="display: none;">
+                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                            <span>Recording audio...</span>
+                            <span id="recordingTimer" class="font-bold bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-900">00:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Divider Line -->
+                    <div class="border-t border-slate-200 dark:border-slate-800 my-6"></div>
+
+                    <!-- Meeting Language Dropdown -->
+                    <div class="space-y-1.5 mb-6">
+                        <label for="meetingLanguageSelect" class="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            Meeting language
+                        </label>
+                        <div class="relative">
+                            <select id="meetingLanguageSelect" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition cursor-pointer">
+                                <option value="English" selected>English</option>
+                                <option value="Hindi">Hindi</option>
+                                <option value="Hinglish">Hinglish</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Minutes Action Button -->
+                    <div>
+                        <button type="button" id="startPipelineBtn" disabled class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 dark:disabled:bg-slate-800/80 disabled:text-slate-400 dark:disabled:text-slate-600 text-white font-bold py-3 px-4 rounded-xl text-xs sm:text-sm transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            <span>Generate Minutes</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Processing State: Visible AI Pipeline Checklist with Animated Waveform -->
+                <div id="uploadProcessingState" class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-10 shadow-sm max-w-xl mx-auto transition-all" style="display: none;">
+                    <!-- Animated Waveform Equalizer -->
+                    <div class="flex items-center justify-center gap-1.5 h-12 mb-5">
+                        <div class="waveform-bar" style="animation-delay: 0.0s; height: 10px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.15s; height: 18px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.3s; height: 32px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.45s; height: 38px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.2s; height: 22px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.5s; height: 35px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.1s; height: 14px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.35s; height: 26px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.6s; height: 40px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.25s; height: 20px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.4s; height: 30px;"></div>
+                        <div class="waveform-bar" style="animation-delay: 0.18s; height: 12px;"></div>
+                    </div>
+
+                    <!-- Processing Title & File Info -->
+                    <div class="text-center mb-7">
+                        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">Processing your meeting</h2>
+                        <div class="flex items-center justify-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                            <span id="fileNameDisplay" class="truncate max-w-[170px] font-semibold text-slate-700 dark:text-slate-300">meeting_recording.mp3</span>
+                            <span>&bull;</span>
+                            <span id="fileSizeDisplay">12.4 MB</span>
+                            <span>&bull;</span>
+                            <span id="procLanguageBadge" class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900">English</span>
+                        </div>
+                    </div>
+
+                    <!-- 5-Stage Live Pipeline Checklist -->
+                    <div class="space-y-3.5 max-w-sm mx-auto">
+                        <!-- Stage 1: Audio uploaded -->
+                        <div id="pipeStage1" class="flex items-center gap-3.5 p-2 rounded-xl transition-all duration-300">
+                            <div class="pipe-icon-wrapper w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs bg-emerald-500 text-white shadow-sm border border-emerald-500">
+                                <span class="pipe-icon"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            </div>
+                            <span class="pipe-label text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">Audio uploaded</span>
+                        </div>
+
+                        <!-- Stage 2: Speech transcription complete (Whisper ASR) -->
+                        <div id="pipeStage2" class="flex items-center gap-3.5 p-2 rounded-xl transition-all duration-300">
+                            <div class="pipe-icon-wrapper w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs border border-slate-300 dark:border-slate-700 text-slate-400">
+                                <span class="pipe-icon"><svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span>
+                            </div>
+                            <div class="flex items-center justify-between flex-1">
+                                <span class="pipe-label text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400">Speech transcription complete</span>
+                                <span class="text-xs text-slate-400 hidden sm:inline">Whisper ASR</span>
+                            </div>
+                        </div>
+
+                        <!-- Stage 3: Generating meeting summary (NLP) -->
+                        <div id="pipeStage3" class="flex items-center gap-3.5 p-2 rounded-xl transition-all duration-300">
+                            <div class="pipe-icon-wrapper w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs border border-slate-300 dark:border-slate-700 text-slate-400">
+                                <span class="pipe-icon"><svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span>
+                            </div>
+                            <div class="flex items-center justify-between flex-1">
+                                <span class="pipe-label text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400">Generating meeting summary</span>
+                                <span class="text-xs text-slate-400 hidden sm:inline">NLP</span>
+                            </div>
+                        </div>
+
+                        <!-- Stage 4: Extracting action items -->
+                        <div id="pipeStage4" class="flex items-center gap-3.5 p-2 rounded-xl transition-all duration-300">
+                            <div class="pipe-icon-wrapper w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs border border-slate-300 dark:border-slate-700 text-slate-400">
+                                <span class="pipe-icon"><svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span>
+                            </div>
+                            <span class="pipe-label text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400">Extracting action items</span>
+                        </div>
+
+                        <!-- Stage 5: Preparing your minutes -->
+                        <div id="pipeStage5" class="flex items-center gap-3.5 p-2 rounded-xl transition-all duration-300">
+                            <div class="pipe-icon-wrapper w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs border border-slate-300 dark:border-slate-700 text-slate-400">
+                                <span class="pipe-icon"><svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span>
+                            </div>
+                            <span class="pipe-label text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400">Preparing your minutes</span>
+                        </div>
+                    </div>
+
+                    <!-- Footnote subtitle and Cancel -->
+                    <div class="mt-8 text-center pt-6 border-t border-slate-100 dark:border-slate-800/80">
+                        <p class="text-xs text-slate-400 font-medium">This may take a moment...</p>
+                        <button type="button" id="cancelUploadBtn" class="mt-4 px-5 py-2 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-200 dark:hover:border-rose-900 bg-white dark:bg-slate-900 transition shadow-sm inline-flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <span>Cancel</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Two-Panel Meeting Results Workspace (Fireflies / Reccordly Style) -->
+                <div id="minutesOutputContainer" class="space-y-6 w-full" style="display: none;">
+                    <!-- Workspace Header Bar -->
+                    <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <!-- Left: Back Button, Title, Metrics -->
+                            <div class="flex items-center gap-3">
+                                <button type="button" id="backToMeetingsFromWorkspaceBtn" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition shrink-0 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                                    <span>Meetings</span>
+                                </button>
+                                <div class="overflow-hidden">
+                                    <div class="flex items-center gap-2">
+                                        <h1 id="resultMeetingTitle" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">Project Discussion</h1>
+                                        <span id="resultLanguageBadge" class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded border border-blue-200 dark:border-blue-900 shrink-0">English</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                                        <span id="resultDuration">18m 42s</span>
+                                        <span>&bull;</span>
+                                        <span id="resultWordCount">142 words</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Center: Synchronized Audio Player Bar -->
+                            <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 px-3.5 py-2 rounded-xl flex-1 max-w-lg">
+                                <button type="button" id="audioPlayPauseBtn" class="theme-btn-primary w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shrink-0 transition shadow-sm" title="Play / Pause Audio">
+                                    <span id="playPauseIcon" class="flex items-center justify-center">
+                                        <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    </span>
+                                </button>
+                                <input type="range" id="audioScrubber" min="0" max="100" value="0" class="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg">
+                                <div class="flex items-center gap-1 text-xs shrink-0">
+                                    <span id="audioCurrentTime" class="font-semibold text-slate-700 dark:text-slate-300">00:00</span>
+                                    <span class="text-slate-400">/</span>
+                                    <span id="audioTotalDuration" class="text-slate-400">--:--</span>
+                                </div>
+                                <button type="button" id="audioSpeedBtn" class="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 transition shrink-0" title="Playback Speed">1.0x</button>
+                                <audio id="audioPreview" class="hidden"></audio>
+                            </div>
+
+                            <!-- Right: Export Dropdown & New Meeting Action -->
+                            <div class="flex items-center gap-2 shrink-0">
+                                <!-- Export Button (Opens Interactive Modal) -->
+                                <button type="button" id="openExportModalBtn" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200 shadow-sm transition">
+                                    <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    <span>Export</span>
+                                </button>
+
+                                <!-- New Meeting Button -->
+                                <button type="button" id="startNewMeetingAfterResultBtn" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    <span>New</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Meeting Workspace Pill Tab Navigation (No Split View) -->
+                    <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800 custom-scrollbar">
+                        <button type="button" data-meeting-tab="summary" class="meeting-tab-btn theme-pill active inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Overview</span>
+                        </button>
+                        <button type="button" data-meeting-tab="insights" class="meeting-tab-btn text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                            <svg class="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.4 8.6L21 11L14.4 13.4L12 20L9.6 13.4L3 11L9.6 8.6L12 2Z"/></svg>
+                            <span>AI Insights</span>
+                        </button>
+                        <button type="button" data-meeting-tab="actions" class="meeting-tab-btn text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            <span>Action Items</span>
+                            <span id="meetingTabActionBadge" class="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">0</span>
+                        </button>
+                        <button type="button" data-meeting-tab="transcript" class="meeting-tab-btn text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                            <span>Transcript</span>
+                        </button>
+                    </div>
+
+                    <!-- Meeting Tab Panes -->
+                    <div id="meetingPanesContainer" class="w-full">
+                        <!-- PANE 1: OVERVIEW (Default Active) -->
+                        <div id="meetingPaneSummary" class="meeting-pane space-y-4">
+                            <!-- Card 1: Overview -->
+                            <div class="workspace-card bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800/90 rounded-2xl p-5 shadow-sm">
+                                <div class="flex items-center gap-2 mb-2.5">
+                                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Executive Overview</h3>
+                                </div>
+                                <p id="summaryContent" class="text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300"></p>
+                            </div>
+
+                            <!-- Card 2: Key Points -->
+                            <div class="workspace-card bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800/90 rounded-2xl p-5 shadow-sm">
+                                <div class="flex items-center gap-2 mb-2.5">
+                                    <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                                    <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Key Discussion Points</h3>
+                                </div>
+                                <ul id="discussionPointsList" class="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300"></ul>
+                            </div>
+
+                            <!-- Card 3: Key Decisions -->
+                            <div class="workspace-card bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800/90 rounded-2xl p-5 shadow-sm">
+                                <div class="flex items-center gap-2 mb-2.5">
+                                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Key Decisions</h3>
+                                </div>
+                                <ul id="decisionsList" class="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300"></ul>
+                            </div>
+                        </div>
+
+                        <!-- PANE 2: AI INSIGHTS -->
+                        <div id="meetingPaneInsights" class="meeting-pane hidden space-y-4">
+                            <div id="aiInsightsCard" class="workspace-card bg-gradient-to-br from-white via-white to-blue-50/40 dark:from-[#0d121f] dark:via-[#0d121f] dark:to-blue-950/20 border border-blue-200/90 dark:border-blue-900/60 rounded-2xl p-6 shadow-sm space-y-5">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400">
+                                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2L14.4 8.6L21 11L14.4 13.4L12 20L9.6 13.4L3 11L9.6 8.6L12 2Z"/>
+                                        </svg>
+                                        <span class="text-sm font-bold">AI Insights</span>
+                                    </div>
+                                    <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/70 px-3 py-1 rounded-full border border-blue-200/80 dark:border-blue-900/60">Live Assistant</span>
+                                </div>
+
+                                <!-- What should I know? Section -->
+                                <div class="space-y-3 bg-white/70 dark:bg-slate-900/50 p-4 rounded-xl border border-blue-100 dark:border-blue-950">
+                                    <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span>What should I know?</span>
+                                    </h3>
+                                    <ul id="aiInsightsBulletList" class="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                                        <li class="flex items-start gap-2.5">
+                                             <span class="text-blue-600 dark:text-blue-400 font-bold shrink-0 mt-0.5">•</span>
+                                            <span class="ai-insight-bullet leading-relaxed">The project deadline is Friday.</span>
+                                        </li>
+                                        <li class="flex items-start gap-2.5">
+                                            <span class="text-blue-600 dark:text-blue-400 font-bold shrink-0 mt-0.5">•</span>
+                                            <span class="ai-insight-bullet leading-relaxed">API integration is the main remaining dependency.</span>
+                                        </li>
+                                        <li class="flex items-start gap-2.5">
+                                            <span class="text-blue-600 dark:text-blue-400 font-bold shrink-0 mt-0.5">•</span>
+                                            <span class="ai-insight-bullet leading-relaxed">3 tasks were assigned across the team.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Ask about this meeting... Section -->
+                                <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <label for="aiAskInput" class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 block">
+                                            Ask about this meeting
+                                        </label>
+                                        <span class="text-xs text-slate-400">Extractive Query Engine</span>
+                                    </div>
+                                    <form id="aiAskForm" class="relative flex items-center">
+                                        <input type="text" id="aiAskInput" placeholder="Ask AI about deadlines, tasks, decisions, or assignments..." class="w-full bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-12 py-3 text-xs sm:text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-inner">
+                                        <button type="submit" id="aiAskSubmitBtn" title="Ask AI" class="theme-btn-primary absolute right-2 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition shadow-sm flex items-center justify-center cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                                        </button>
+                                    </form>
+
+                                    <!-- Quick Prompt Suggestion Chips -->
+                                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                                        <span class="text-[11px] text-slate-400 font-medium">Suggestions:</span>
+                                        <button type="button" class="quick-ask-chip text-xs bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-1 rounded-lg border border-slate-200/80 dark:border-slate-700/80 transition cursor-pointer">What was decided?</button>
+                                        <button type="button" class="quick-ask-chip text-xs bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-1 rounded-lg border border-slate-200/80 dark:border-slate-700/80 transition cursor-pointer">Who has deadlines?</button>
+                                        <button type="button" class="quick-ask-chip text-xs bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-1 rounded-lg border border-slate-200/80 dark:border-slate-700/80 transition cursor-pointer">Summarize key dependencies</button>
+                                    </div>
+
+                                    <!-- AI Response Box -->
+                                    <div id="aiAnswerBox" class="hidden p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-900/60 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span id="aiAnswerSourceBadge" class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 px-2.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">Source</span>
+                                            <button type="button" id="closeAiAnswerBtn" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium cursor-pointer">Dismiss</button>
+                                        </div>
+                                        <p id="aiAnswerText" class="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANE 3: ACTION ITEMS -->
+                        <div id="meetingPaneActions" class="meeting-pane hidden space-y-4">
+                            <div class="workspace-card bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800/90 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                                <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Action Items &amp; Deliverables</h3>
+                                            <p class="text-xs text-slate-400">Interactive task tracking with status checkboxes and assignments</p>
+                                        </div>
+                                        <span id="actionItemCountBadge" class="text-xs font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-900 ml-2">0</span>
+                                    </div>
+                                    <button type="button" id="addNewActionCardBtn" class="theme-btn-primary inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-xl transition shadow-sm cursor-pointer">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                        <span>Add Task</span>
+                                    </button>
+                                </div>
+                                <div id="actionCardsContainer" class="space-y-3">
+                                    <!-- Populated dynamically via JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANE 4: TRANSCRIPT (Exact requested format) -->
+                        <div id="meetingPaneTranscript" class="meeting-pane hidden space-y-4">
+                            <div class="workspace-card bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800/90 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Transcript</h2>
+                                            <p class="text-xs text-slate-400">Click any timing tag to start audio playback from that timestamp</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="relative flex-1 sm:w-64">
+                                            <input type="text" id="transcriptSearchInput" placeholder="Search in transcript..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+                                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                            </div>
+                                        </div>
+                                        <button type="button" id="copyTranscriptBtn" class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 transition cursor-pointer">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                                            <span>Copy</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Scrollable Transcript Utterances -->
+                                <div id="transcriptUtterancesContainer" class="space-y-4 max-h-[640px] overflow-y-auto custom-scrollbar pr-1">
+                                    <!-- Populated dynamically via JS: 
+                                         TRANSCRIPT
+                                         00:02
+                                         We need to discuss the project deadline...
+                                    -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- All Meetings Archive View -->
+            <section id="viewMeetings" class="dashboard-view hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">All Meetings</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">Review, search, and manage recorded sessions</p>
+                    </div>
+                    <button type="button" class="switch-to-upload-btn inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span>New Meeting</span>
+                    </button>
+                </div>
+
+                <!-- Search and Filter Bar -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div class="relative flex-1">
+                        <input type="text" id="meetingSearchInput" placeholder="Search meetings..." class="w-full bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs sm:text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                    </div>
+                    <div class="relative shrink-0">
+                        <select id="meetingFilterSelect" class="appearance-none bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-xl pl-3.5 pr-8 py-2.5 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                            <option value="all">All Meetings</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="tasks">Has Action Items</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Meeting Cards List -->
+                <div id="meetingCardsList" class="space-y-3">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="noMeetingsFound" class="hidden text-center py-12 bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">No meetings match your search</p>
+                    <p class="text-xs text-slate-400 mt-1">Try modifying your search query or filter</p>
+                </div>
+            </section>
+
+            <!-- Productivity Analytics View -->
+            <section id="viewAnalytics" class="dashboard-view hidden space-y-6">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Analytics</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">Efficiency and productivity metrics</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+                    <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Time Saved</span>
+                        <div class="mt-2 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">14.8 hrs</div>
+                        <p class="text-xs text-slate-500 mt-1">Automatic audio transcription &amp; minute generation</p>
+                    </div>
+                    <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Action Completion Rate</span>
+                        <div class="mt-2 text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">84.2%</div>
+                        <p class="text-xs text-slate-500 mt-1">32 of 38 deliverables completed</p>
+                    </div>
+                    <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Average Processing Speed</span>
+                        <div class="mt-2 text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400">&lt; 25s</div>
+                        <p class="text-xs text-slate-500 mt-1">Whisper speech recognition &amp; extraction</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Workspace Settings View -->
+            <section id="viewSettings" class="dashboard-view hidden space-y-6">
+                <!-- Settings Header matching uploaded screenshot -->
+                <div class="flex items-center gap-3.5 pb-1">
+                    <div class="w-10 h-10 rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-800 dark:border-slate-700 flex items-center justify-center text-blue-500 shadow-sm shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Settings &amp; Preferences</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage your profile, preferences, AI pipeline settings, and account data.</p>
+                    </div>
+                </div>
+
+                <!-- Feedback Toast Banner -->
+                <div id="settingsToast" class="hidden p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <span>Settings updated and saved successfully!</span>
+                </div>
+
+                <!-- Horizontal Pill Navigation Tabs (No 'All Settings') -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800/80 custom-scrollbar">
+                    <button type="button" data-settings-tab="profile" class="settings-tab-btn theme-pill active inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        <span>Profile</span>
+                    </button>
+                    <button type="button" data-settings-tab="preferences" class="settings-tab-btn text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                        <span>Preferences</span>
+                    </button>
+                    <button type="button" data-settings-tab="ai" class="settings-tab-btn text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <span>AI Pipeline</span>
+                    </button>
+                    <button type="button" data-settings-tab="account" class="settings-tab-btn text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span>Account &amp; Data</span>
+                    </button>
+                </div>
+
+                <!-- Full-Screen Settings Panels (Edge-to-edge, Professional Typography, No Monospace) -->
+                <div id="settingsPanelsContainer" class="w-full py-4">
+
+                    <!-- ==================== PANEL 1: PROFILE ==================== -->
+                    <div id="settingsPanelProfile" class="settings-panel space-y-8">
+                        <div>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Profile Information</h3>
+                            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage your personal details, meeting signature, and visual accent theme.</p>
+                        </div>
+
+                        <!-- Row 1: Avatar & Theme Accent Color -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label class="text-sm font-semibold text-slate-900 dark:text-white block">Avatar &amp; Accent Color</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Select your avatar initial and workspace highlight theme.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl flex flex-wrap items-center gap-5">
+                                <div id="settingsAvatarPreview" class="avatar-accent w-12 h-12 rounded-full text-white font-bold flex items-center justify-center text-lg shadow-sm shrink-0 transition-colors" style="background-color: var(--theme-accent) !important">
+                                    <span>{{ (user.name or 'U')[0] }}</span>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Choose Theme Palette</span>
+                                    <div class="flex items-center gap-2.5" id="avatarColorPicker">
+                                        <button type="button" data-color="blue" title="Royal Blue" class="avatar-color-btn w-7 h-7 rounded-full bg-blue-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
+                                        <button type="button" data-color="indigo" title="Indigo Accent" class="avatar-color-btn w-7 h-7 rounded-full bg-indigo-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
+                                        <button type="button" data-color="purple" title="Purple Violet" class="avatar-color-btn w-7 h-7 rounded-full bg-purple-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
+                                        <button type="button" data-color="emerald" title="Emerald Green" class="avatar-color-btn w-7 h-7 rounded-full bg-emerald-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
+                                        <button type="button" data-color="rose" title="Rose Pink" class="avatar-color-btn w-7 h-7 rounded-full bg-rose-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Full Name -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingDisplayName" class="text-sm font-semibold text-slate-900 dark:text-white block">Full Name</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Your display name across generated meeting minutes and task lists.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl">
+                                <input type="text" id="settingDisplayName" value="{{ user.name or 'User' }}" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm">
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Email Address with Change Email Action -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingEmail" class="text-sm font-semibold text-slate-900 dark:text-white block">Email Address</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Used for signing in and receiving exported meeting packages.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl space-y-3">
+                                <div class="flex items-center gap-3">
+                                    <input type="email" id="settingEmail" value="{{ user.email or 'user@example.com' }}" readonly class="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 outline-none cursor-not-allowed shadow-sm">
+                                    <button type="button" id="openChangeEmailBtn" class="shrink-0 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 transition shadow-sm cursor-pointer">
+                                        Change Email
+                                    </button>
+                                </div>
+                                <!-- Collapsible Change Email Box -->
+                                <div id="changeEmailBox" class="hidden p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                                    <label for="settingNewEmail" class="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Enter New Email Address</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="email" id="settingNewEmail" placeholder="new.email@example.com" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+                                        <button type="button" id="confirmChangeEmailBtn" class="theme-btn-primary shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-sm cursor-pointer">
+                                            Update
+                                        </button>
+                                        <button type="button" id="cancelChangeEmailBtn" class="shrink-0 px-3 py-2 rounded-xl text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Phone Number (Optional) with Country Code -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingPhoneNumber" class="text-sm font-semibold text-slate-900 dark:text-white block">Phone Number (Optional)</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Optional contact number for meeting notifications and SMS alerts.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl flex items-center gap-2.5">
+                                <select id="settingPhoneCountry" class="appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer shrink-0">
+                                    <option value="+1">+1 (US)</option>
+                                    <option value="+91" selected>+91 (IN)</option>
+                                    <option value="+44">+44 (UK)</option>
+                                    <option value="+49">+49 (DE)</option>
+                                    <option value="+33">+33 (FR)</option>
+                                    <option value="+81">+81 (JP)</option>
+                                    <option value="+61">+61 (AU)</option>
+                                </select>
+                                <input type="tel" id="settingPhoneNumber" placeholder="Optional phone number" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm">
+                            </div>
+                        </div>
+
+                        <!-- Row 5: Job Title -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingJobTitle" class="text-sm font-semibold text-slate-900 dark:text-white block">Job Title</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Your role during meeting discussions and task assignments.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl">
+                                <input type="text" id="settingJobTitle" placeholder="e.g. Lead Engineer, Product Lead, or Student Researcher" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm">
+                            </div>
+                        </div>
+
+                        <!-- Row 6: Organization -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingOrganization" class="text-sm font-semibold text-slate-900 dark:text-white block">Organization</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Associated academic institution or company department.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl">
+                                <input type="text" id="settingOrganization" placeholder="e.g. ITM University / Computer Science" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm">
+                            </div>
+                        </div>
+
+                        <!-- Row 7: Timezone -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingTimezone" class="text-sm font-semibold text-slate-900 dark:text-white block">Timezone</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Synchronizes accurate meeting recording timecodes and calendar deliverables.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl relative">
+                                <select id="settingTimezone" class="w-full appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                                    <option value="Asia/Kolkata" selected>(GMT+05:30) India Standard Time - New Delhi, Kolkata, Mumbai</option>
+                                    <option value="UTC">(GMT+00:00) UTC / London (GMT)</option>
+                                    <option value="America/New_York">(GMT-05:00) Eastern Time - New York, Washington</option>
+                                    <option value="America/Los_Angeles">(GMT-08:00) Pacific Time - Los Angeles, San Francisco</option>
+                                    <option value="Europe/Berlin">(GMT+01:00) Central European Time - Berlin, Paris</option>
+                                    <option value="Asia/Singapore">(GMT+08:00) Singapore, Hong Kong</option>
+                                    <option value="Asia/Tokyo">(GMT+09:00) Japan Standard Time - Tokyo</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== PANEL 2: PREFERENCES ==================== -->
+                    <div id="settingsPanelPreferences" class="settings-panel hidden space-y-8">
+                        <div>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Workspace Preferences</h3>
+                            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Customize your interface theme, audio playback behavior, and default document formats.</p>
+                        </div>
+
+                        <!-- Row 1: Appearance Theme -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingTheme" class="text-sm font-semibold text-slate-900 dark:text-white block">Appearance Theme</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Switch between modern dark, light, or system-synchronized appearance.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl relative">
+                                <select id="settingTheme" class="w-full appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                                    <option value="system">System Default (Automatic)</option>
+                                    <option value="light">Light Theme</option>
+                                    <option value="dark">Dark Theme</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Default Audio Language -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingLanguage" class="text-sm font-semibold text-slate-900 dark:text-white block">Default Audio Language</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Pre-selected speech recognition model language for audio uploads.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl relative">
+                                <select id="settingLanguage" class="w-full appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                                    <option value="English" selected>English (International)</option>
+                                    <option value="Hindi">Hindi (हिन्दी)</option>
+                                    <option value="Hinglish">Hinglish (Conversational Code-Switching)</option>
+                                    <option value="Spanish">Spanish (Español)</option>
+                                    <option value="French">French (Français)</option>
+                                    <option value="German">German (Deutsch)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Auto-Scroll Transcript -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <span class="text-sm font-semibold text-slate-900 dark:text-white block">Auto-scroll Transcript</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Keep the active sentence in view as audio playback progresses.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl flex items-center justify-between">
+                                <span class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium">Auto-scroll transcript during playback</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingAutoScroll" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Completion Sound Chime -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <span class="text-sm font-semibold text-slate-900 dark:text-white block">Sound Alerts</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Play an audible chime when transcription and summarization conclude.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl flex items-center justify-between">
+                                <span class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium">Notification chime on complete</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingSoundAlerts" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Row 5: Default Export Format -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingDefaultExport" class="text-sm font-semibold text-slate-900 dark:text-white block">Default Export Format</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Preferred file format when initiating one-click meeting exports.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl relative">
+                                <select id="settingDefaultExport" class="w-full appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                                    <option value="pdf" selected>PDF Document (.pdf)</option>
+                                    <option value="docx">Microsoft Word (.docx)</option>
+                                    <option value="txt">Plain Text (.txt)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 6: Timestamp Display Standard -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingTimeFormat" class="text-sm font-semibold text-slate-900 dark:text-white block">Timestamp Format</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Formatting style for audio seek points and dialogue time markers.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl relative">
+                                <select id="settingTimeFormat" class="w-full appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                                    <option value="mmss" selected>Minutes &amp; Seconds (00:18)</option>
+                                    <option value="hhmmss">Full Hours, Minutes &amp; Seconds (00:00:18)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== PANEL 3: AI PIPELINE ==================== -->
+                    <div id="settingsPanelAi" class="settings-panel hidden space-y-8">
+                        <div>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">AI Pipeline Configuration</h3>
+                            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Configure the NLP summarization engine, extraction heuristics, and dialogue tags.</p>
+                        </div>
+
+                        <!-- Row 1: Summary Length & Tone -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingSummaryLength" class="text-sm font-semibold text-slate-900 dark:text-white block">Summary Detail</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Sets the detail level and structural depth of the generated minutes.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl relative">
+                                <select id="settingSummaryLength" class="w-full appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                                    <option value="balanced" selected>Balanced (Standard Executive Overview)</option>
+                                    <option value="concise">Concise (Single High-Level Summary)</option>
+                                    <option value="detailed">Detailed (Exhaustive &amp; Action-Oriented)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Extract Key Decisions -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <span class="text-sm font-semibold text-slate-900 dark:text-white block">Key Decisions Extraction</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Automatically isolate and record agreed-upon project conclusions.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl flex items-center justify-between">
+                                <span class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium">Extract decisions into a standalone section</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingExtractDecisions" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Action Item Sensitivity -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingActionSensitivity" class="text-sm font-semibold text-slate-900 dark:text-white block">Task Detection Sensitivity</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Strictness of the model when tagging commitments and action deliverables.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl relative">
+                                <select id="settingActionSensitivity" class="w-full appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                                    <option value="balanced" selected>Standard (Balanced commitments &amp; deadlines)</option>
+                                    <option value="strict">Strict (Explicit tasks with named owners only)</option>
+                                    <option value="comprehensive">Comprehensive (Includes passive follow-ups)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Discussion Points Limit -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <label for="settingDiscussionPointsCount" class="text-sm font-semibold text-slate-900 dark:text-white block">Discussion Points Limit</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Maximum number of high-level discussion points to synthesize.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl relative">
+                                <select id="settingDiscussionPointsCount" class="w-full appearance-none bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm cursor-pointer">
+                                    <option value="3">Top 3 Key Highlights</option>
+                                    <option value="5" selected>Top 5 Standard Points</option>
+                                    <option value="all">All Extracted Topics</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 5: Interactive Timestamps -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6">
+                            <div class="sm:w-80 shrink-0">
+                                <span class="text-sm font-semibold text-slate-900 dark:text-white block">Interactive Timestamps</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Display interactive time chips above each spoken paragraph to seek audio.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl flex items-center justify-between">
+                                <span class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium">Render timestamp chips on transcript</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingShowTimestamps" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== PANEL 4: ACCOUNT & DATA ==================== -->
+                    <div id="settingsPanelAccount" class="settings-panel hidden space-y-8">
+                        <div>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Account &amp; Data Security</h3>
+                            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Manage session cache, backup meeting archives, and account credentials.</p>
+                        </div>
+
+                        <!-- Row 1: Backup & Export All Data -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <span class="text-sm font-semibold text-slate-900 dark:text-white block">Export Archive</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Download complete JSON archive containing all transcripts and generated minutes.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl">
+                                <button type="button" id="downloadAllDataBtn" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 transition shadow-sm cursor-pointer">
+                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    <span>Download Archive (.json)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Storage & Cache Usage -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200/70 dark:border-slate-800/80">
+                            <div class="sm:w-80 shrink-0">
+                                <span class="text-sm font-semibold text-slate-900 dark:text-white block">Storage &amp; Cache</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Cached audio recordings, waveform buffers, and temporary session transcripts.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl space-y-3">
+                                <div class="flex items-center justify-between text-xs text-slate-500">
+                                    <span>14.2 MB of 1.0 GB used</span>
+                                    <span>1.4%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full theme-btn-primary" style="width: 1.4%"></div>
+                                </div>
+                                <button type="button" id="clearMeetingHistoryBtn" class="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer inline-flex items-center gap-1 mt-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    <span>Clear Local Meeting Cache</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Change Password -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6">
+                            <div class="sm:w-80 shrink-0">
+                                <span class="text-sm font-semibold text-slate-900 dark:text-white block">Password &amp; Security</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Update your password credentials to ensure secure access to meeting archives.</p>
+                            </div>
+                            <div class="flex-1 max-w-2xl space-y-3">
+                                <button type="button" id="openChangePasswordBtn" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 transition shadow-sm cursor-pointer">
+                                    Change Password
+                                </button>
+                                <!-- Collapsible Password Form -->
+                                <div id="changePasswordBox" class="hidden p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                                    <div>
+                                        <label for="settingCurrentPassword" class="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Current Password</label>
+                                        <input type="password" id="settingCurrentPassword" placeholder="••••••••" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+                                    </div>
+                                    <div>
+                                        <label for="settingNewPassword" class="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">New Password</label>
+                                        <input type="password" id="settingNewPassword" placeholder="Minimum 8 characters" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+                                    </div>
+                                    <div class="flex items-center gap-2 pt-1">
+                                        <button type="button" id="confirmChangePasswordBtn" class="theme-btn-primary px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-sm cursor-pointer">
+                                            Update Password
+                                        </button>
+                                        <button type="button" id="cancelChangePasswordBtn" class="px-3 py-2 rounded-xl text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Save Changes Button -->
+                <div class="pt-6 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                    <button type="button" id="saveSettingsBtn" class="theme-btn-primary font-semibold text-xs sm:text-sm px-6 py-2.5 rounded-xl shadow-sm transition inline-flex items-center gap-2 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>Save Changes</span>
+                    </button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Export Meeting Modal Dialog -->
+    <div id="exportModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+        <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in duration-150">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Export Meeting Minutes</h3>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Select sections to include in your file</p>
+                    </div>
+                </div>
+                <button type="button" id="closeExportModalBtn" aria-label="Close export modal" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Checkbox Options -->
+            <div class="space-y-2.5">
+                <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition select-none">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="exportOptSummary" checked class="w-4 h-4 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500 cursor-pointer">
+                        <span class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">Overview</span>
+                    </div>
+                    <span class="text-xs text-slate-400">Overview &amp; Points</span>
+                </label>
+
+                <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition select-none">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="exportOptDecisions" checked class="w-4 h-4 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500 cursor-pointer">
+                        <span class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">Key Decisions</span>
+                    </div>
+                    <span class="text-xs text-slate-400">Agreed Points</span>
+                </label>
+
+                <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition select-none">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="exportOptActionItems" checked class="w-4 h-4 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500 cursor-pointer">
+                        <span class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">Action Items</span>
+                    </div>
+                    <span class="text-xs text-slate-400">Tasks &amp; Deadlines</span>
+                </label>
+
+                <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition select-none">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="exportOptTranscript" checked class="w-4 h-4 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500 cursor-pointer">
+                        <span class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">Full Transcript</span>
+                    </div>
+                    <span class="text-xs text-slate-400">Timestamped Text</span>
+                </label>
+            </div>
+
+            <!-- Direct Export Action Buttons: PDF and DOCX -->
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2.5">
+                <button type="button" id="modalExportPdfBtn" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center justify-center gap-2">
+                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white/20">PDF</span>
+                    <span>Download PDF</span>
+                </button>
+                <button type="button" id="modalExportDocxBtn" class="theme-btn-primary flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center justify-center gap-2">
+                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white/20">DOCX</span>
+                    <span>Download Word</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="{{ url_for('static', filename='script.js') }}?v=2.2"></script>
+    <script>
+        // Toggle theme between dark and light, syncing with localStorage
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+        }
+
+        // Adjust greeting dynamically according to current time of day
+        (function() {
+            const greetingEl = document.getElementById('dynamicGreeting');
+            if (greetingEl) {
+                const hour = new Date().getHours();
+                let timeGreeting = "Good evening";
+                if (hour < 12) timeGreeting = "Good morning";
+                else if (hour < 17) timeGreeting = "Good afternoon";
+                
+                const userName = "{{ user.name or 'User' }}";
+                greetingEl.textContent = `${timeGreeting}, ${userName}`;
+            }
+        })();
+    </script>
+</body>
+</html>
