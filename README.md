@@ -1,23 +1,18 @@
 # AI Meeting Minutes Generator (Meetly)
 ### Automated Speech-to-Text, Abstractive Summarization & Action Item Extraction
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg)](https://www.python.org/downloads/)
-[![Flask 3.0+](https://img.shields.io/badge/flask-3.1.3-green.svg)](https://flask.palletsprojects.com/)
-[![Whisper ASR](https://img.shields.io/badge/ASR-OpenAI%20Whisper-orange.svg)](https://github.com/openai/whisper)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 ---
 
 ## Abstract & Overview
 
 Meetings are a core component of academic, corporate, and professional collaboration. However, manual note-taking is time-consuming, prone to human omission, and often lacks consistent structure. 
 
-**Meetly (AI Meeting Minutes Generator)** is an automated system designed to transform recorded conversational audio and video into structured, actionable meeting minutes. The platform integrates:
-1. **Automatic Speech Recognition (ASR)** using OpenAI Whisper and faster-whisper.
-2. **Natural Language Processing (NLP)** for abstractive summarization, discussion point extraction, and decision tracking.
-3. **Automated Action Item Detection** to identify tasks, assignees, deadlines, and completion statuses.
-4. **Interactive Two-Panel Workspace** featuring an integrated audio player, waveform scrubber, real-time AI Q&A assistant, and live editable minutes.
-5. **Multi-Format Document Generation** supporting PDF and Microsoft Word (DOCX) export with selective section inclusion.
+Meetly (AI Meeting Minutes Generator) is an automated system designed to transform recorded conversational audio and video into structured, actionable meeting minutes. The platform integrates:
+1. Automatic Speech Recognition (ASR) using OpenAI Whisper and faster-whisper.
+2. Natural Language Processing (NLP) for abstractive summarization, discussion point extraction, and decision tracking.
+3. Automated Action Item Detection to identify tasks, assignees, deadlines, and completion statuses.
+4. Interactive Two-Panel Workspace featuring an integrated audio player, waveform scrubber, real-time AI Q&A assistant, and live editable minutes.
+5. Multi-Format Document Generation supporting PDF and Microsoft Word (DOCX) export with selective section inclusion.
 
 ---
 
@@ -86,20 +81,20 @@ Meetings are a core component of academic, corporate, and professional collabora
 
 - **Speech-to-Text Pipeline:** Fast transcription with voice activity detection (VAD) to ignore background silence.
 - **Structured Minutes Generation:** Automatically organizes minutes into:
-  - **Executive Summary:** Concise high-level summary of the discussion.
-  - **Key Discussion Points:** Grouped architectural and operational topics.
-  - **Decisions Made:** Explicit resolutions and team agreements.
-  - **Action Items Table:** Interactive task cards with assignees, deadlines, and status tracking.
+  - Executive Summary: Concise high-level summary of the discussion.
+  - Key Discussion Points: Grouped architectural and operational topics.
+  - Decisions Made: Explicit resolutions and team agreements.
+  - Action Items Table: Interactive task cards with assignees, deadlines, and status tracking.
 - **AI Meeting Assistant (`/api/ask_ai`):** Natural language Q&A over transcript content for answers on deadlines, assigned tasks, or architectural decisions.
 - **Audio Playback & Timestamp Seek:** Click any transcript utterance to seek the audio player to that exact timestamp.
-- **Selective PDF & Word DOCX Export:** Choose which sections to include in the downloaded minutes. Includes ReportLab XML entity sanitization.
+- **Selective PDF & Word DOCX Export:** Choose which sections to include in the downloaded minutes with ReportLab XML entity sanitization.
 - **Security Protections:**
   - Configurable CORS whitelist with preflight OPTIONS handling.
   - Path traversal protection using secure_filename().
   - File upload limits (250 MB) and format verification.
   - Security headers (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection).
   - HttpOnly and SameSite session cookie protection.
-- **Modern Responsive UI:** Dark/Light theme toggle, customizable accent colors, drag-and-drop ingestion, and instant guest demo mode.
+- **Responsive UI:** Dark/Light theme toggle, customizable accent colors, drag-and-drop ingestion, and instant guest demo mode.
 
 ---
 
@@ -212,17 +207,3 @@ http://127.0.0.1:5000
 | `/api/ask_ai` | `POST` | Natural language Q&A over meeting transcript |
 | `/api/meeting_insights` | `GET, POST` | Returns summary highlights for the executive panel |
 | `/export/<format>` | `GET, POST` | Downloads PDF or Word DOCX (format=pdf or format=docx) |
-
----
-
-## Future Enhancements
-
-1. **Speaker Diarization:** Identify and attribute transcript statements to individual speakers.
-2. **Live Meeting Transcription:** WebRTC and WebSocket streaming for real-time in-meeting minutes generation.
-3. **Task Integrations:** Direct export to Jira, Trello, Asana, Notion, and Slack.
-4. **Multilingual Translation:** Automatic translation of non-English meetings into English executive summaries.
-
----
-
-## License
-This project is developed for academic and educational purposes under the **MIT License**.
