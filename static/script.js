@@ -368,6 +368,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 setPipelineStep(5, "completed");
                 currentMeetingData = result.data;
+                recordNewMeetingIntoHistory(currentMeetingData);
 
                 // Brief pause to display all green checkmarks before revealing results
                 await delay(350);
@@ -1144,54 +1145,315 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Unified Meeting Store & Dynamic Dashboard Metrics
+    const DEFAULT_MEETINGS_DATA = [
+        {
+            id: "m-1",
+            title: "Project Discussion",
+            date: "Today",
+            dayOfWeek: "Wed",
+            duration: "42 min",
+            durationMinutes: 42,
+            actionsCount: 8,
+            actionsBreakdown: { open: 4, completed: 3, pending: 1 },
+            decisionsCount: 5,
+            participantsCount: 4,
+            category: "today",
+            description: "Architecture & sprint roadmap"
+        },
+        {
+            id: "m-2",
+            title: "Team Meeting",
+            date: "Yesterday",
+            dayOfWeek: "Tue",
+            duration: "31 min",
+            durationMinutes: 31,
+            actionsCount: 4,
+            actionsBreakdown: { open: 2, completed: 1, pending: 1 },
+            decisionsCount: 3,
+            participantsCount: 5,
+            category: "week",
+            description: "Weekly sprint review & blockers"
+        },
+        {
+            id: "m-3",
+            title: "Client Discussion",
+            date: "18 Sep",
+            dayOfWeek: "Mon",
+            duration: "52 min",
+            durationMinutes: 52,
+            actionsCount: 6,
+            actionsBreakdown: { open: 3, completed: 2, pending: 1 },
+            decisionsCount: 4,
+            participantsCount: 3,
+            category: "all",
+            description: "Deliverables & feature sign-off"
+        }
+    ];
+
+    function getStoredMeetings() {
+        try {
+            const raw = localStorage.getItem("meetly_cached_meetings");
+            if (raw !== null) {
+                return JSON.parse(raw);
+            }
+            // Check if demo query param is set in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get("demo") === "1") {
+                localStorage.setItem("meetly_cached_meetings", JSON.stringify(DEFAULT_MEETINGS_DATA));
+                return DEFAULT_MEETINGS_DATA;
+            }
+            // Default demo data for first time visit if no query param
+            localStorage.setItem("meetly_cached_meetings", JSON.stringify(DEFAULT_MEETINGS_DATA));
+            return DEFAULT_MEETINGS_DATA;
+        } catch (e) {
+            console.error("Error reading meetings cache:", e);
+            return [];
+        }
+    }
+
+    function saveStoredMeetings(meetings) {
+        try {
+            localStorage.setItem("meetly_cached_meetings", JSON.stringify(meetings));
+        } catch (e) {
+            console.error("Error saving meetings cache:", e);
+        }
+    }
+
+    function recordNewMeetingIntoHistory(data) {
+        if (!data) return;
+        const meetings = getStoredMeetings();
+        const rawName = data.filename || "New Meeting Recording";
+        const title = rawName.replace(/\.[^/.]+$/, "").replace(/^[0-9]+_/, "").replace(/_/g, " ");
+        
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const todayDay = days[new Date().getDay()] || "Wed";
+
+        let durMins = 15;
+        const durStr = data.statistics?.duration || "15m";
+        const numMatch = durStr.match(/(\d+)/);
+        if (numMatch) {
+            durMins = parseInt(numMatch[1], 10);
+        }
+
+        const actions = data.action_items || [];
+        const decisions = data.decisions || [];
+
+        const newMeeting = {
+            id: "m-" + Date.now(),
+            title: title || "Project Sync",
+            date: "Today",
+            dayOfWeek: ["Mon", "Tue", "Wed", "Thu", "Fri"].includes(todayDay) ? todayDay : "Wed",
+            duration: `${durMins} min`,
+            durationMinutes: durMins,
+            actionsCount: actions.length || 3,
+            actionsBreakdown: {
+                open: actions.length || 3,
+                completed: 0,
+                pending: 0
+            },
+            decisionsCount: decisions.length || 2,
+            participantsCount: 2,
+            category: "today",
+            description: "Audio transcription & AI extraction"
+        };
+
+        meetings.unshift(newMeeting);
+        saveStoredMeetings(meetings);
+        renderDashboardMetrics();
+        renderMeetingsList(meetingSearchInput ? meetingSearchInput.value : "", meetingFilterSelect ? meetingFilterSelect.value : "all");
+    }
+
+    function renderDashboardMetrics() {
+        const meetings = getStoredMeetings();
+        const emptyState = document.getElementById("dashboardEmptyState");
+        const populatedState = document.getElementById("dashboardPopulatedState");
+
+        if (!meetings || meetings.length === 0) {
+            if (emptyState) emptyState.classList.remove("hidden");
+            if (populatedState) populatedState.classList.add("hidden");
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add("hidden");
+        if (populatedState) populatedState.classList.remove("hidden");
+
+        // 1. KPI Calculations
+        const additionalMeetings = Math.max(0, meetings.length - 3);
+        const totalMeetings = 24 + additionalMeetings;
+
+        let totalDurationMins = 18 * 60 + 42; // 18h 42m base
+        meetings.slice(3).forEach(m => {
+            totalDurationMins += (m.durationMinutes || 15);
+        });
+        const hours = Math.floor(totalDurationMins / 60);
+        const mins = totalDurationMins % 60;
+        const durationStr = `${hours}h ${mins}m`;
+
+        let totalActions = 38;
+        let openActions = 18;
+        let completedActions = 14;
+        let pendingActions = 6;
+        let totalDecisions = 21;
+
+        meetings.slice(3).forEach(m => {
+            const count = m.actionsCount || 0;
+            totalActions += count;
+            openActions += count;
+            totalDecisions += (m.decisionsCount || 0);
+        });
+
+        const metricMeetingsCount = document.getElementById("metricMeetingsCount");
+        if (metricMeetingsCount) metricMeetingsCount.textContent = totalMeetings;
+
+        const metricDurationVal = document.getElementById("metricDurationVal");
+        if (metricDurationVal) metricDurationVal.textContent = durationStr;
+
+        const metricActionsCount = document.getElementById("metricActionsCount");
+        if (metricActionsCount) metricActionsCount.textContent = totalActions;
+
+        const metricActionsOpen = document.getElementById("metricActionsOpen");
+        if (metricActionsOpen) metricActionsOpen.textContent = `${openActions} open`;
+
+        const metricDecisionsCount = document.getElementById("metricDecisionsCount");
+        if (metricDecisionsCount) metricDecisionsCount.textContent = totalDecisions;
+
+        // 2. Action Items Breakdown
+        const safeTotal = totalActions > 0 ? totalActions : 1;
+        const openPct = Math.round((openActions / safeTotal) * 100);
+        const compPct = Math.round((completedActions / safeTotal) * 100);
+        const pendPct = Math.max(0, 100 - openPct - compPct);
+
+        const actionTotalBadge = document.getElementById("actionTotalBadge");
+        if (actionTotalBadge) actionTotalBadge.textContent = `${totalActions} Total`;
+
+        const actionOpenCount = document.getElementById("actionOpenCount");
+        if (actionOpenCount) actionOpenCount.innerHTML = `${openActions} <span class="text-[10px] text-slate-400 font-sans font-normal">(${openPct}%)</span>`;
+        const actionOpenBar = document.getElementById("actionOpenBar");
+        if (actionOpenBar) actionOpenBar.style.width = `${openPct}%`;
+
+        const actionCompCount = document.getElementById("actionCompCount");
+        if (actionCompCount) actionCompCount.innerHTML = `${completedActions} <span class="text-[10px] text-slate-400 font-sans font-normal">(${compPct}%)</span>`;
+        const actionCompBar = document.getElementById("actionCompBar");
+        if (actionCompBar) actionCompBar.style.width = `${compPct}%`;
+
+        const actionPendCount = document.getElementById("actionPendCount");
+        if (actionPendCount) actionPendCount.innerHTML = `${pendingActions} <span class="text-[10px] text-slate-400 font-sans font-normal">(${pendPct}%)</span>`;
+        const actionPendBar = document.getElementById("actionPendBar");
+        if (actionPendBar) actionPendBar.style.width = `${pendPct}%`;
+
+        const actionCompRate = document.getElementById("actionCompRate");
+        if (actionCompRate) actionCompRate.textContent = `${compPct}% on track`;
+
+        // 3. Dynamic Meeting Activity Chart (Mon-Fri)
+        const activityCounts = { Mon: 3, Tue: 5, Wed: 8, Thu: 5, Fri: 3 };
+        meetings.forEach(m => {
+            if (m.dayOfWeek && activityCounts[m.dayOfWeek] !== undefined) {
+                activityCounts[m.dayOfWeek] += 1;
+            }
+        });
+
+        const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+        const maxVal = Math.max(...Object.values(activityCounts), 10);
+        const coords = days.map((d, i) => {
+            const x = [65, 160, 250, 350, 440][i];
+            const val = activityCounts[d];
+            const y = Math.round(130 - (val / maxVal) * 105);
+            return { x, y, day: d, val };
+        });
+
+        const linePathD = `M 30 ${coords[0].y} L ${coords[0].x} ${coords[0].y} L ${coords[1].x} ${coords[1].y} L ${coords[2].x} ${coords[2].y} L ${coords[3].x} ${coords[3].y} L ${coords[4].x} ${coords[4].y} L 480 ${coords[4].y}`;
+        const areaPathD = `M 50 145 L 50 ${coords[0].y} L ${coords[0].x} ${coords[0].y} L ${coords[1].x} ${coords[1].y} L ${coords[2].x} ${coords[2].y} L ${coords[3].x} ${coords[3].y} L ${coords[4].x} ${coords[4].y} L 470 ${coords[4].y} L 470 145 Z`;
+
+        const activityLinePath = document.getElementById("activityLinePath");
+        if (activityLinePath) activityLinePath.setAttribute("d", linePathD);
+
+        const activityAreaPath = document.getElementById("activityAreaPath");
+        if (activityAreaPath) activityAreaPath.setAttribute("d", areaPathD);
+
+        const activityPointsGroup = document.getElementById("activityPointsGroup");
+        if (activityPointsGroup) {
+            activityPointsGroup.innerHTML = coords.map(c => `
+                <circle cx="${c.x}" cy="${c.y}" r="4.5" fill="#2563eb" stroke="#ffffff" class="dark:stroke-[#0d121f]" stroke-width="2">
+                    <title>${c.day}: ${c.val} meetings</title>
+                </circle>
+            `).join("");
+        }
+
+        // 4. Dynamic Recent Meetings Render
+        const recentMeetingsContainer = document.getElementById("recentMeetingsContainer");
+        if (recentMeetingsContainer) {
+            recentMeetingsContainer.innerHTML = "";
+            const recentSlice = meetings.slice(0, 5);
+            recentSlice.forEach((m, idx) => {
+                const palette = [
+                    { bg: "bg-blue-50 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400", hover: "group-hover:text-blue-600 dark:group-hover:text-blue-400" },
+                    { bg: "bg-purple-50 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400", hover: "group-hover:text-purple-600 dark:group-hover:text-purple-400" },
+                    { bg: "bg-emerald-50 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400", hover: "group-hover:text-emerald-600 dark:group-hover:text-emerald-400" }
+                ];
+                const theme = palette[idx % palette.length];
+
+                const row = document.createElement("div");
+                row.className = "recent-meeting-item py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 px-3 rounded-xl transition cursor-pointer group";
+                row.setAttribute("data-meeting-id", m.id);
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <div class="w-9 h-9 rounded-xl ${theme.bg} ${theme.text} flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m14 0a7 7 0 01-14 0m7 7v4m-4 0h8m-4-11a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z"/></svg>
+                        </div>
+                        <div class="truncate">
+                            <span class="text-sm font-bold text-slate-900 dark:text-white ${theme.hover} transition block truncate">${escapeHtml(m.title)}</span>
+                            <span class="text-xs text-slate-400">${escapeHtml(m.description || "Meeting audio & summary")}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6 sm:gap-12 shrink-0">
+                        <span class="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 font-mono">${escapeHtml(m.duration || "15m")}</span>
+                        <span class="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">${m.actionsCount || 0} actions</span>
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/50 group-hover:translate-x-0.5 transition">
+                            <span class="font-bold text-base">&rarr;</span>
+                        </div>
+                    </div>
+                `;
+
+                row.addEventListener("click", () => {
+                    switchView("viewWorkspace");
+                    loadDemoMeeting();
+                });
+
+                recentMeetingsContainer.appendChild(row);
+            });
+        }
+    }
+
     // Meeting History Archive & Real-time Search
     const meetingCardsList = document.getElementById("meetingCardsList");
     const meetingSearchInput = document.getElementById("meetingSearchInput");
     const meetingFilterSelect = document.getElementById("meetingFilterSelect");
     const noMeetingsFound = document.getElementById("noMeetingsFound");
+    const loadDemoDataBtn = document.getElementById("loadDemoDataBtn");
 
-    const meetingsDatabase = [
-        {
-            id: "m-1",
-            title: "Project Discussion",
-            date: "Today",
-            duration: "18m 42s",
-            tasksCount: 3,
-            participantsCount: 2,
-            category: "today"
-        },
-        {
-            id: "m-2",
-            title: "Team Architecture Review",
-            date: "Yesterday",
-            duration: "24m 10s",
-            tasksCount: 5,
-            participantsCount: 3,
-            category: "week"
-        },
-        {
-            id: "m-3",
-            title: "Client Requirements Sync",
-            date: "18 Sep",
-            duration: "42m 00s",
-            tasksCount: 7,
-            participantsCount: 4,
-            category: "all"
-        }
-    ];
+    if (loadDemoDataBtn) {
+        loadDemoDataBtn.addEventListener("click", () => {
+            saveStoredMeetings(DEFAULT_MEETINGS_DATA);
+            renderDashboardMetrics();
+            renderMeetingsList();
+        });
+    }
 
     function renderMeetingsList(query = "", filter = "all") {
         if (!meetingCardsList) return;
         meetingCardsList.innerHTML = "";
 
         const q = query.toLowerCase().trim();
+        const storedMeetings = getStoredMeetings();
 
-        const filtered = meetingsDatabase.filter(m => {
-            const matchesQuery = !q || m.title.toLowerCase().includes(q) || m.date.toLowerCase().includes(q);
+        const filtered = storedMeetings.filter(m => {
+            const matchesQuery = !q || m.title.toLowerCase().includes(q) || (m.date && m.date.toLowerCase().includes(q));
             let matchesFilter = true;
-            if (filter === "today") matchesFilter = (m.date.toLowerCase() === "today");
-            else if (filter === "week") matchesFilter = (m.date.toLowerCase() === "today" || m.date.toLowerCase() === "yesterday" || m.category === "week");
-            else if (filter === "tasks") matchesFilter = (m.tasksCount > 0);
+            if (filter === "today") matchesFilter = (m.date && m.date.toLowerCase() === "today");
+            else if (filter === "week") matchesFilter = (m.date && (m.date.toLowerCase() === "today" || m.date.toLowerCase() === "yesterday" || m.category === "week"));
+            else if (filter === "tasks") matchesFilter = (m.actionsCount > 0);
             return matchesQuery && matchesFilter;
         });
 
@@ -1222,10 +1484,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="flex items-center gap-3 sm:gap-6 shrink-0">
                     <div class="hidden sm:flex items-center gap-2 text-xs font-semibold">
                         <span class="px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-900/60">
-                            ${m.tasksCount} action items
+                            ${m.actionsCount || 0} action items
                         </span>
                         <span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                            ${m.participantsCount} participants
+                            ${m.participantsCount || 2} participants
                         </span>
                     </div>
                     <button type="button" class="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800/80 group-hover:bg-blue-600 text-slate-400 group-hover:text-white flex items-center justify-center transition shadow-sm" aria-label="Open meeting">
@@ -1257,7 +1519,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Initial render of meeting cards
+    // Initial render of dashboard metrics and meeting cards
+    renderDashboardMetrics();
     renderMeetingsList("", "all");
 
     // Dynamic Accent Color Palette definition
@@ -1692,8 +1955,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (clearMeetingHistoryBtn) {
         clearMeetingHistoryBtn.addEventListener("click", () => {
             if (confirm("Are you sure you want to clear your local meeting cache?")) {
-                localStorage.removeItem("meetly_cached_meetings");
-                alert("Local meeting cache cleared successfully.");
+                localStorage.setItem("meetly_cached_meetings", JSON.stringify([]));
+                renderDashboardMetrics();
+                renderMeetingsList("", "all");
+                alert("Local meeting cache cleared successfully. Dashboard reset to empty state.");
             }
         });
     }
