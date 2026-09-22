@@ -134,16 +134,30 @@ AI-Meeting-Minutes-Generator/
 │   └── exporter.py            # PDF and Word DOCX document generation
 │
 ├── static/                    # Frontend static assets
-│   ├── style.css              # Custom styling
-│   ├── landing.css            # Landing page styling
-│   └── script.js              # Client-side reactivity and API requests
+│   ├── css/
+│   │   ├── theme.css          # Design system & dynamic theme tokens
+│   │   ├── style.css          # Base styles
+│   │   └── landing.css        # Landing styles
+│   └── js/
+│       ├── dashboard.js       # App controller, view switcher & Chart.js engine
+│       ├── meetings.js        # Meetings store, search, filters & tag manager
+│       └── workspace.js       # Audio upload, player sync & AI minutes workspace
 │
 ├── templates/                 # Server-rendered HTML templates
-│   ├── landing.html           # Landing page
+│   ├── components/            # Modular dashboard views and components
+│   │   ├── header.html        # Top global application bar
+│   │   ├── sidebar.html       # Persistent navigation sidebar
+│   │   ├── dashboard_view.html# KPI overview & interactive activity chart
+│   │   ├── workspace_view.html# Audio ingestion & meeting intelligence
+│   │   ├── meetings_view.html # Searchable meetings list & filters
+│   │   ├── analytics_view.html# Productivity & completion metrics
+│   │   ├── settings_view.html # Preferences & AI pipeline config
+│   │   └── modals.html        # Export, rename, and tag dialogs
+│   ├── landing.html           # Public landing page
 │   ├── login.html             # User authentication view
 │   ├── signup.html            # Registration view
-│   ├── dashboard.html         # Main workspace dashboard
-│   └── index.html             # Single-page interface
+│   ├── dashboard.html         # Main application container
+│   └── index.html             # Prototype single-page interface
 │
 ├── uploads/                   # Staged audio files (.gitkeep)
 └── outputs/                   # Generated PDF and DOCX documents (.gitkeep)

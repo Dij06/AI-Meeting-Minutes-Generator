@@ -1,0 +1,133 @@
+            <section id="viewMeetings" class="dashboard-view hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Meetings</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">Review, search, and manage recorded sessions</p>
+                    </div>
+                    <button type="button" class="switch-to-upload-btn inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span>New Meeting</span>
+                    </button>
+                </div>
+
+                <!-- Search and Primary Filter Controls -->
+                <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+                    <!-- Row 1: Search Input & Sort Dropdown -->
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div class="relative flex-1">
+                            <input type="text" id="meetingSearchInput" placeholder="Search meetings by name, date, or transcript content..." class="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs sm:text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-inner">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Sort Dropdown -->
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs text-slate-400 font-medium">Sort:</span>
+                            <div class="relative">
+                                <select id="meetingSortSelect" class="appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition cursor-pointer shadow-2xs">
+                                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="newest" selected>Newest</option>
+                                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="oldest">Oldest</option>
+                                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="duration">Longest Duration</option>
+                                    <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="actions">Most Action Items</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Date Dropdown & Duration Dropdown (One Line) + Sleek Modern Toggle Pills -->
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                        <!-- Left: Dates & Duration Dropdowns in One Line -->
+                        <div class="flex items-center gap-3 sm:gap-4 flex-wrap">
+                            <!-- Date Dropdown -->
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-400 font-medium">Date:</span>
+                                <div class="relative">
+                                    <select id="meetingDateSelect" class="appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition cursor-pointer shadow-2xs">
+                                        <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="all" selected>All Dates</option>
+                                        <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="week">This Week</option>
+                                        <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="month">This Month</option>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Duration Dropdown -->
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-400 font-medium">Duration:</span>
+                                <div class="relative">
+                                    <select id="meetingDurationSelect" class="appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition cursor-pointer shadow-2xs">
+                                        <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="all" selected>All Durations</option>
+                                        <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="under15">&lt; 15 mins</option>
+                                        <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="15to30">15 - 30 mins</option>
+                                        <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="over30">&gt; 30 mins</option>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Sleek Filter Chips (Action Items, Decisions) & Compact List Toggle -->
+                        <div class="flex items-center gap-3 sm:gap-4 flex-wrap">
+                            <!-- Filter Chips: Lightweight, clean & subtle -->
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="filterHasActionsChip" class="meeting-filter-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/70 hover:border-slate-300 dark:hover:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 transition cursor-pointer select-none" title="Filter meetings with action items">
+                                    <svg class="w-3.5 h-3.5 text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                                    <span>Has action items</span>
+                                </button>
+
+                                <button type="button" id="filterHasDecisionsChip" class="meeting-filter-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/70 hover:border-slate-300 dark:hover:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 transition cursor-pointer select-none" title="Filter meetings with recorded decisions">
+                                    <svg class="w-3.5 h-3.5 text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span>Has decisions</span>
+                                </button>
+                            </div>
+
+                            <!-- Modern Toggle Switch: Compact View -->
+                            <div class="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium select-none">Compact:</span>
+                                <label class="relative inline-flex items-center cursor-pointer select-none" title="Toggle compact list spacing">
+                                    <input type="checkbox" id="compactMeetingsToggle" class="sr-only peer">
+                                    <div class="theme-toggle-track w-9 h-5 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-xs peer-checked:after:translate-x-4"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Tag Filter Pills with dynamic New Tag creation -->
+                    <div class="flex items-center justify-between gap-3 flex-wrap pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-xs text-slate-400 font-medium mr-1">Tags:</span>
+                            <div id="tagFilterPillsContainer" class="flex items-center gap-1.5 flex-wrap">
+                                <!-- Rendered dynamically via JS with #All, default tags, and user created tags -->
+                            </div>
+                        </div>
+
+                        <!-- User tag creation action -->
+                        <button type="button" id="addNewCustomTagBtn" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/50 dark:bg-slate-900/50 transition cursor-pointer shrink-0">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span>New Tag</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Meeting Cards List -->
+                <div id="meetingCardsList" class="space-y-3">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="noMeetingsFound" class="hidden text-center py-12 bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">No meetings match your search</p>
+                    <p class="text-xs text-slate-400 mt-1">Try modifying your search query, tags, or filters</p>
+                </div>
+            </section>
