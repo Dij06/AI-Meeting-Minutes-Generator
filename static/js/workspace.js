@@ -124,16 +124,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         dropZone.addEventListener("dragover", (e) => {
             e.preventDefault();
-            dropZone.classList.add("border-blue-500", "bg-blue-50/40", "dark:bg-blue-950/20");
+            dropZone.classList.add("border-pink-500", "bg-pink-50/40", "dark:bg-pink-950/20");
         });
 
         dropZone.addEventListener("dragleave", () => {
-            dropZone.classList.remove("border-blue-500", "bg-blue-50/40", "dark:bg-blue-950/20");
+            dropZone.classList.remove("border-pink-500", "bg-pink-50/40", "dark:bg-pink-950/20");
         });
 
         dropZone.addEventListener("drop", (e) => {
             e.preventDefault();
-            dropZone.classList.remove("border-blue-500", "bg-blue-50/40", "dark:bg-blue-950/20");
+            dropZone.classList.remove("border-pink-500", "bg-pink-50/40", "dark:bg-pink-950/20");
             if (e.dataTransfer.files.length > 0) {
                 handleFileSelection(e.dataTransfer.files[0]);
             }
@@ -290,13 +290,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } else if (state === "active") {
             if (iconWrapper) {
-                iconWrapper.className = "pipe-icon-wrapper w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs bg-blue-600 text-white animate-pulse ring-4 ring-blue-500/20 border border-blue-600";
+                iconWrapper.className = "pipe-icon-wrapper w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs bg-pink-600 text-white animate-pulse ring-4 ring-pink-500/20 border border-pink-600";
             }
             if (icon) {
                 icon.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>`;
             }
             if (label) {
-                label.className = "pipe-label text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400";
+                label.className = "pipe-label text-xs sm:text-sm font-bold text-pink-600 dark:text-pink-400";
             }
         } else {
             if (iconWrapper) {
@@ -730,7 +730,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const li = document.createElement("li");
                 li.className = "flex items-start gap-2.5 leading-relaxed text-xs sm:text-sm";
                 li.innerHTML = `
-                    <span class="text-blue-500 font-bold shrink-0 mt-0.5">•</span>
+                    <span class="text-pink-500 font-bold shrink-0 mt-0.5">•</span>
                     <span>${escapeHtml(point)}</span>
                 `;
                 discussionPointsList.appendChild(li);
@@ -785,7 +785,7 @@ document.addEventListener("DOMContentLoaded", () => {
         card.className = `action-card p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800/90 bg-white dark:bg-slate-900/80 hover:border-slate-300 dark:hover:border-slate-700 transition-all flex items-start gap-3.5 group ${isDone ? "task-completed" : ""}`;
 
         card.innerHTML = `
-            <button type="button" class="action-check-btn w-6 h-6 rounded-lg border-2 ${isDone ? "bg-blue-600 border-blue-600 text-white shadow-sm" : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-blue-500 hover:scale-105 text-transparent"} flex items-center justify-center transition-all duration-150 shrink-0 mt-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20" aria-label="Toggle task status">
+            <button type="button" class="action-check-btn w-6 h-6 rounded-lg border-2 ${isDone ? "bg-pink-600 border-pink-600 text-white shadow-sm" : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-pink-500 hover:scale-105 text-transparent"} flex items-center justify-center transition-all duration-150 shrink-0 mt-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-500/20" aria-label="Toggle task status">
                 <svg class="w-3.5 h-3.5 check-icon ${isDone ? "opacity-100 scale-100" : "opacity-0 scale-50"} transition-all duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                 </svg>
@@ -801,7 +801,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         <span>${escapeHtml(deadline)}</span>
                     </span>
-                    <span class="status-badge ml-auto px-2.5 py-0.5 rounded-md font-semibold text-xs ${isDone ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"}">
+                    <span class="status-badge ml-auto px-2.5 py-0.5 rounded-md font-semibold text-xs ${isDone ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : "bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20"}">
                         ${isDone ? "Completed" : "Pending"}
                     </span>
                     <button type="button" class="delete-action-btn text-slate-400 hover:text-rose-500 p-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer" title="Delete Task">
@@ -823,7 +823,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (hideCompletedTasksToggle && hideCompletedTasksToggle.checked) {
                     card.style.display = "none";
                 }
-                checkBtn.className = "action-check-btn w-6 h-6 rounded-lg border-2 bg-blue-600 border-blue-600 text-white shadow-sm flex items-center justify-center transition-all duration-150 shrink-0 mt-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20";
+                checkBtn.className = "action-check-btn w-6 h-6 rounded-lg border-2 bg-pink-600 border-pink-600 text-white shadow-sm flex items-center justify-center transition-all duration-150 shrink-0 mt-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-500/20";
                 checkIcon.className = "w-3.5 h-3.5 check-icon opacity-100 scale-100 transition-all duration-150";
                 taskText.className = "task-text text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 cursor-text leading-snug line-through text-slate-400 dark:text-slate-500";
                 statusBadge.textContent = "Completed";
@@ -832,11 +832,11 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 card.classList.remove("task-completed");
                 card.style.display = "flex";
-                checkBtn.className = "action-check-btn w-6 h-6 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-blue-500 hover:scale-105 text-transparent flex items-center justify-center transition-all duration-150 shrink-0 mt-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20";
+                checkBtn.className = "action-check-btn w-6 h-6 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-pink-500 hover:scale-105 text-transparent flex items-center justify-center transition-all duration-150 shrink-0 mt-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-500/20";
                 checkIcon.className = "w-3.5 h-3.5 check-icon opacity-0 scale-50 transition-all duration-150";
                 taskText.className = "task-text text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 cursor-text leading-snug";
                 statusBadge.textContent = "Pending";
-                statusBadge.className = "status-badge ml-auto px-2.5 py-0.5 rounded-md font-semibold text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20";
+                statusBadge.className = "status-badge ml-auto px-2.5 py-0.5 rounded-md font-semibold text-xs bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20";
             }
             updateActionCardCount();
         }
@@ -926,8 +926,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             bubble.innerHTML = `
                 <div class="mb-1.5 flex items-center justify-between">
-                    <button type="button" class="timestamp-seek-btn text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1.5 py-0.5 cursor-pointer" title="Play from ${u.time}" data-seconds="${u.seconds}">
-                        <svg class="w-3 h-3 fill-current text-blue-500" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <button type="button" class="timestamp-seek-btn text-xs font-bold text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1.5 py-0.5 cursor-pointer" title="Play from ${u.time}" data-seconds="${u.seconds}">
+                        <svg class="w-3 h-3 fill-current text-pink-500" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                         <span>${u.time}</span>
                     </button>
                 </div>
@@ -1159,7 +1159,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const li = document.createElement("li");
             li.className = "flex items-start gap-2";
             li.innerHTML = `
-                <span class="text-blue-600 dark:text-blue-400 font-bold shrink-0 mt-0.5">&bull;</span>
+                <span class="text-pink-600 dark:text-pink-400 font-bold shrink-0 mt-0.5">&bull;</span>
                 <span class="ai-insight-bullet">${escapeHtml(bText)}</span>
             `;
             aiInsightsBulletList.appendChild(li);
@@ -1278,12 +1278,57 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+    async function openSavedMeeting(meeting) {
+        if (!meeting) return;
+        let fullMeeting = meeting;
+        if (meeting.db_id && !meeting.summary && !meeting.transcript && (!Array.isArray(meeting.action_items) || meeting.action_items.length === 0)) {
+            try {
+                const res = await fetch(`/api/meetings/${meeting.db_id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.meeting) {
+                        fullMeeting = data.meeting;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (typeof window.switchView === "function") {
+            window.switchView("viewWorkspace");
+        }
+
+        const stats = fullMeeting.statistics || {};
+        const transcriptText = fullMeeting.transcript || "";
+        const wordCount = stats.word_count || (transcriptText.trim() ? transcriptText.trim().split(/\s+/).length : 0);
+
+        const payload = {
+            ...fullMeeting,
+            _historyMeetingId: fullMeeting.id || (fullMeeting.db_id ? `db-${fullMeeting.db_id}` : null),
+            filename: fullMeeting.filename || fullMeeting.title || "Meeting_Transcript.mp3",
+            summary: fullMeeting.summary || fullMeeting.description || "No summary available for this meeting.",
+            discussion_points: Array.isArray(fullMeeting.discussion_points) ? fullMeeting.discussion_points : [],
+            decisions: Array.isArray(fullMeeting.decisions) ? fullMeeting.decisions : [],
+            action_items: Array.isArray(fullMeeting.action_items) ? fullMeeting.action_items : [],
+            utterances: Array.isArray(fullMeeting.utterances) ? fullMeeting.utterances : [],
+            transcript: transcriptText,
+            statistics: {
+                duration: stats.duration || fullMeeting.duration || "0m",
+                word_count: wordCount,
+                language: stats.language || "English"
+            }
+        };
+
+        renderTwoPanelWorkspace(payload);
+    }
+
 // Expose workspace functions globally and on window.Meetly
     window.renderTwoPanelWorkspace = renderTwoPanelWorkspace;
     window.resetNewMeetingWorkspace = resetNewMeetingWorkspace;
     window.prepareExportPayload = prepareExportPayload;
+    window.openSavedMeeting = openSavedMeeting;
 
     window.Meetly.renderTwoPanelWorkspace = renderTwoPanelWorkspace;
     window.Meetly.resetNewMeetingWorkspace = resetNewMeetingWorkspace;
     window.Meetly.prepareExportPayload = prepareExportPayload;
+    window.Meetly.openSavedMeeting = openSavedMeeting;
 });

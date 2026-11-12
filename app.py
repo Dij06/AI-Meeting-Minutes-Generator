@@ -1,9 +1,19 @@
 import os
 import time
+import uuid
 from werkzeug.utils import secure_filename
-from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for, make_response
 from flask_cors import CORS
 from services.exporter import generate_docx, generate_pdf
+from services.auth import init_auth_db, create_user, authenticate_user
+from services.meetings_db import (
+    init_meetings_db,
+    save_meeting,
+    get_user_meetings,
+    update_meeting,
+    delete_meeting,
+    get_analytics_summary,
+)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "ai_meeting_minutes_secure_session_key_2026")
@@ -36,6 +46,9 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+AUTH_DB_PATH = os.path.join(BASE_DIR, "instance", "meetly.db")
+init_auth_db(AUTH_DB_PATH)
+init_meetings_db(AUTH_DB_PATH)
 
 # Add standard web security headers to protect against clickjacking, sniffing, and XSS
 @app.after_request
@@ -55,11 +68,12 @@ def allowed_file(filename):
 current_meeting_data = {}
 
 # Transcribe audio file using Whisper ASR, gracefully falling back if model is offline
-def run_transcription_pipeline(audio_path):
+def run_transcription_pipeline(audio_path, language=None):
     try:
         from services.transcriber import transcribe_audio
-        return transcribe_audio(audio_path)
-    except (ImportError, NotImplementedError, Exception):
+        return transcribe_audio(audio_path, language=language)
+    except (ImportError, NotImplementedError, Exception) as exc:
+        app.logger.warning("Transcription pipeline fallback triggered: %s", exc)
         return None
 
 # Process transcribed text into structured summary, decisions, and action items
@@ -67,7 +81,8 @@ def run_summarization_pipeline(transcript_text):
     try:
         from services.summarizer import generate_meeting_minutes
         return generate_meeting_minutes(transcript_text)
-    except (ImportError, NotImplementedError, Exception):
+    except (ImportError, NotImplementedError, Exception) as exc:
+        app.logger.warning("Summarization pipeline fallback triggered: %s", exc)
         return None
 
 # Convert raw text or Whisper segments into structured utterances
@@ -210,35 +225,58 @@ def get_demo_data():
 def landing():
     return render_template("landing.html")
 
-# User sign-in with quick Google or guest demo shortcuts
+# User sign-in with real credential verification and instant guest access
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.args.get("google") == "1":
-        session["user"] = {"name": "Google User", "email": "user@gmail.com"}
+        session["user"] = {"name": "Google User", "email": "user@gmail.com", "is_guest": False}
         return redirect(url_for("dashboard"))
 
     if request.args.get("guest") == "1":
-        session["user"] = {"name": "Guest User", "email": "guest@demo.com"}
+        session["user"] = {
+            "name": "Guest User",
+            "email": f"guest-{uuid.uuid4().hex[:8]}@guest.meetly.app",
+            "is_guest": True
+        }
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
         email = request.form.get("email", "")
-        name = email.split("@")[0].capitalize() if "@" in email else "User"
-        session["user"] = {"name": name, "email": email}
+        password = request.form.get("password", "")
+        ok, result = authenticate_user(AUTH_DB_PATH, email, password)
+        if not ok:
+            session["auth_error"] = result
+            return redirect(url_for("login"))
+        session["user"] = result
         return redirect(url_for("dashboard"))
-    
-    return render_template("login.html")
+
+    error = session.pop("auth_error", None)
+    resp = make_response(render_template("login.html", error=error))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 # Account registration endpoint
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
-        name = request.form.get("name", "User")
+        name = request.form.get("name", "")
         email = request.form.get("email", "")
-        session["user"] = {"name": name, "email": email}
+        password = request.form.get("password", "")
+        ok, result = create_user(AUTH_DB_PATH, name, email, password)
+        if not ok:
+            session["auth_error"] = result
+            return redirect(url_for("signup"))
+        session["user"] = result
         return redirect(url_for("dashboard"))
-    
-    return render_template("signup.html")
+
+    error = session.pop("auth_error", None)
+    resp = make_response(render_template("signup.html", error=error))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 # Protected dashboard workspace view
 @app.route("/dashboard")
@@ -297,7 +335,7 @@ def upload_file():
     file_size_mb = round(os.path.getsize(file_path) / (1024 * 1024), 2)
     
     # Step 1: Transcribe using Whisper ASR
-    asr_result = run_transcription_pipeline(file_path)
+    asr_result = run_transcription_pipeline(file_path, language=language)
     
     if asr_result and "text" in asr_result:
         transcript = asr_result["text"]
@@ -343,6 +381,11 @@ def upload_file():
         "transcript": transcript
     }
 
+    # Save processed meeting in SQLite for the current user (or guest)
+    user_email = (session.get("user") or {}).get("email", "guest@meetly.app")
+    db_id = save_meeting(AUTH_DB_PATH, user_email, current_meeting_data)
+    current_meeting_data["db_id"] = db_id
+
     # Cache in session for isolated multi-tab/user support
     session["meeting_data"] = current_meeting_data
 
@@ -350,6 +393,36 @@ def upload_file():
         "status": "success",
         "message": "Meeting audio successfully processed.",
         "data": current_meeting_data
+    })
+
+
+@app.route("/api/meetings", methods=["GET"])
+def api_list_meetings():
+    user_email = (session.get("user") or {}).get("email", "guest@meetly.app")
+    return jsonify({
+        "status": "success",
+        "meetings": get_user_meetings(AUTH_DB_PATH, user_email),
+    })
+
+
+@app.route("/api/meetings/<int:meeting_id>", methods=["PATCH", "DELETE"])
+def api_modify_meeting(meeting_id):
+    user_email = (session.get("user") or {}).get("email", "guest@meetly.app")
+    if request.method == "DELETE":
+        ok = delete_meeting(AUTH_DB_PATH, user_email, meeting_id)
+        return jsonify({"status": "success" if ok else "not_found"}), (200 if ok else 404)
+
+    payload = request.get_json(silent=True) or {}
+    ok = update_meeting(AUTH_DB_PATH, user_email, meeting_id, payload)
+    return jsonify({"status": "success" if ok else "not_found"}), (200 if ok else 404)
+
+
+@app.route("/api/analytics", methods=["GET"])
+def api_analytics():
+    user_email = (session.get("user") or {}).get("email", "guest@meetly.app")
+    return jsonify({
+        "status": "success",
+        **get_analytics_summary(AUTH_DB_PATH, user_email),
     })
 
 def answer_meeting_question(question: str, data: dict) -> dict:

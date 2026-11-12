@@ -1,7 +1,7 @@
             <section id="viewSettings" class="dashboard-view hidden space-y-6">
                 <!-- Settings Header matching uploaded screenshot -->
                 <div class="flex items-center gap-3.5 pb-1">
-                    <div class="w-10 h-10 rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-800 dark:border-slate-700 flex items-center justify-center text-blue-500 shadow-sm shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-800 dark:border-slate-700 flex items-center justify-center text-pink-500 shadow-sm shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                     </div>
                     <div>
@@ -59,7 +59,7 @@
                                 <div class="space-y-1.5">
                                     <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Choose Theme Palette</span>
                                     <div class="flex items-center gap-2.5" id="avatarColorPicker">
-                                        <button type="button" data-color="blue" title="Royal Blue" class="avatar-color-btn w-7 h-7 rounded-full bg-blue-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
+                                        <button type="button" data-color="pink" title="Bubblegum Pink" class="avatar-color-btn w-7 h-7 rounded-full bg-pink-500 transition hover:scale-110 cursor-pointer shadow-sm"></button>
                                         <button type="button" data-color="indigo" title="Indigo Accent" class="avatar-color-btn w-7 h-7 rounded-full bg-indigo-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
                                         <button type="button" data-color="purple" title="Purple Violet" class="avatar-color-btn w-7 h-7 rounded-full bg-purple-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
                                         <button type="button" data-color="emerald" title="Emerald Green" class="avatar-color-btn w-7 h-7 rounded-full bg-emerald-600 transition hover:scale-110 cursor-pointer shadow-sm"></button>
@@ -76,7 +76,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Your display name across generated meeting minutes and task lists.</p>
                             </div>
                             <div class="flex-1 max-w-2xl">
-                                <input type="text" id="settingDisplayName" value="{{ user.name or 'User' }}" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm">
+                                <input type="text" id="settingDisplayName" value="{{ user.name or 'User' }}" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-sm">
                             </div>
                         </div>
 
@@ -97,7 +97,7 @@
                                 <div id="changeEmailBox" class="hidden p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
                                     <label for="settingNewEmail" class="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Enter New Email Address</label>
                                     <div class="flex items-center gap-2">
-                                        <input type="email" id="settingNewEmail" placeholder="new.email@example.com" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+                                        <input type="email" id="settingNewEmail" placeholder="new.email@example.com" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition">
                                         <button type="button" id="confirmChangeEmailBtn" class="theme-btn-primary shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-sm cursor-pointer">
                                             Update
                                         </button>
@@ -117,7 +117,7 @@
                             </div>
                             <div class="flex-1 max-w-2xl flex items-center gap-2.5">
                                 <div class="relative shrink-0">
-                                    <select id="settingPhoneCountry" class="appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl pl-3 pr-8 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                    <select id="settingPhoneCountry" class="appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl pl-3 pr-8 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                         <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="+1">+1 (US)</option>
                                         <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="+91" selected>+91 (IN)</option>
                                         <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="+44">+44 (UK)</option>
@@ -130,7 +130,7 @@
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                     </div>
                                 </div>
-                                <input type="tel" id="settingPhoneNumber" placeholder="Optional phone number" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs">
+                                <input type="tel" id="settingPhoneNumber" placeholder="Optional phone number" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs">
                             </div>
                         </div>
 
@@ -141,7 +141,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Your role during meeting discussions and task assignments.</p>
                             </div>
                             <div class="flex-1 max-w-2xl">
-                                <input type="text" id="settingJobTitle" placeholder="e.g. Lead Engineer, Product Lead, or Student Researcher" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm">
+                                <input type="text" id="settingJobTitle" placeholder="e.g. Lead Engineer, Product Lead, or Student Researcher" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-sm">
                             </div>
                         </div>
 
@@ -152,7 +152,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Associated academic institution or company department.</p>
                             </div>
                             <div class="flex-1 max-w-2xl">
-                                <input type="text" id="settingOrganization" placeholder="e.g. ITM University / Computer Science" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-sm">
+                                <input type="text" id="settingOrganization" placeholder="e.g. ITM University / Computer Science" class="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-sm">
                             </div>
                         </div>
 
@@ -163,7 +163,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Synchronizes accurate meeting recording timecodes and calendar deliverables.</p>
                             </div>
                             <div class="flex-1 max-w-2xl relative">
-                                <select id="settingTimezone" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                <select id="settingTimezone" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="Asia/Kolkata" selected>(GMT+05:30) India Standard Time - New Delhi, Kolkata, Mumbai</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="UTC">(GMT+00:00) UTC / London (GMT)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="America/New_York">(GMT-05:00) Eastern Time - New York, Washington</option>
@@ -193,7 +193,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Switch between modern dark, light, or system-synchronized appearance.</p>
                             </div>
                             <div class="flex-1 max-w-2xl relative">
-                                <select id="settingTheme" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                <select id="settingTheme" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="system">System Default (Automatic)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="light">Light Theme</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="dark">Dark Theme</option>
@@ -211,7 +211,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Pre-selected speech recognition model language for audio uploads.</p>
                             </div>
                             <div class="flex-1 max-w-2xl relative">
-                                <select id="settingLanguage" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                <select id="settingLanguage" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="English" selected>English (International)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="Hindi">Hindi (हिन्दी)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="Hinglish">Hinglish (Conversational Code-Switching)</option>
@@ -262,7 +262,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Preferred file format when initiating one-click meeting exports.</p>
                             </div>
                             <div class="flex-1 max-w-2xl relative">
-                                <select id="settingDefaultExport" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                <select id="settingDefaultExport" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="pdf" selected>PDF Document (.pdf)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="docx">Microsoft Word (.docx)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="txt">Plain Text (.txt)</option>
@@ -280,7 +280,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Formatting style for audio seek points and dialogue time markers.</p>
                             </div>
                             <div class="flex-1 max-w-2xl relative">
-                                <select id="settingTimeFormat" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                <select id="settingTimeFormat" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="mmss" selected>Minutes &amp; Seconds (00:18)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="hhmmss">Full Hours, Minutes &amp; Seconds (00:00:18)</option>
                                 </select>
@@ -305,7 +305,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Sets the detail level and structural depth of the generated minutes.</p>
                             </div>
                             <div class="flex-1 max-w-2xl relative">
-                                <select id="settingSummaryLength" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                <select id="settingSummaryLength" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="balanced" selected>Balanced (Standard Executive Overview)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="concise">Concise (Single High-Level Summary)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="detailed">Detailed (Exhaustive &amp; Action-Oriented)</option>
@@ -338,7 +338,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Strictness of the model when tagging commitments and action deliverables.</p>
                             </div>
                             <div class="flex-1 max-w-2xl relative">
-                                <select id="settingActionSensitivity" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                <select id="settingActionSensitivity" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="balanced" selected>Standard (Balanced commitments &amp; deadlines)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="strict">Strict (Explicit tasks with named owners only)</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="comprehensive">Comprehensive (Includes passive follow-ups)</option>
@@ -356,7 +356,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Maximum number of high-level discussion points to synthesize.</p>
                             </div>
                             <div class="flex-1 max-w-2xl relative">
-                                <select id="settingDiscussionPointsCount" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs cursor-pointer">
+                                <select id="settingDiscussionPointsCount" class="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2.5 pr-10 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition shadow-2xs cursor-pointer">
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="3">Top 3 Key Highlights</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="5" selected>Top 5 Standard Points</option>
                                     <option class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" value="all">All Extracted Topics</option>
@@ -439,11 +439,11 @@
                                 <div id="changePasswordBox" class="hidden p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
                                     <div>
                                         <label for="settingCurrentPassword" class="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Current Password</label>
-                                        <input type="password" id="settingCurrentPassword" placeholder="••••••••" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+                                        <input type="password" id="settingCurrentPassword" placeholder="••••••••" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition">
                                     </div>
                                     <div>
                                         <label for="settingNewPassword" class="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">New Password</label>
-                                        <input type="password" id="settingNewPassword" placeholder="Minimum 8 characters" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition">
+                                        <input type="password" id="settingNewPassword" placeholder="Minimum 8 characters" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition">
                                     </div>
                                     <div class="flex items-center gap-2 pt-1">
                                         <button type="button" id="confirmChangePasswordBtn" class="theme-btn-primary px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-sm cursor-pointer">

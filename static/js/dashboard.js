@@ -59,13 +59,15 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const raw = localStorage.getItem("meetly_activity_log");
             if (raw !== null) {
-                return JSON.parse(raw);
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(a => !["act-1", "act-2", "act-3"].includes(a.id));
+                }
             }
-            localStorage.setItem("meetly_activity_log", JSON.stringify(DEFAULT_ACTIVITY_DATA));
-            return DEFAULT_ACTIVITY_DATA;
+            return [];
         } catch (e) {
             console.error("Error reading activity log:", e);
-            return DEFAULT_ACTIVITY_DATA;
+            return [];
         }
     }
 
@@ -77,6 +79,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function formatTimeAgo(timestamp, fallback) {
+        if (!timestamp) {
+            return (fallback && fallback !== "Just now") ? fallback : "Earlier";
+        }
+        const tsMs = typeof timestamp === "number" ? timestamp : Date.parse(timestamp);
+        if (!Number.isFinite(tsMs)) {
+            return (fallback && fallback !== "Just now") ? fallback : "Earlier";
+        }
+        const diffSec = Math.max(0, Math.floor((Date.now() - tsMs) / 1000));
+        if (diffSec < 60) return "Just now";
+        const mins = Math.floor(diffSec / 60);
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        const days = Math.floor(hrs / 24);
+        return `${days}d ago`;
+    }
+
     function addActivityLog(title, subtitle, timeStr = "Just now", color = "blue") {
         const activities = getStoredActivities();
         const newAct = {
@@ -84,6 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
             title: title,
             subtitle: subtitle,
             time: timeStr,
+            timestamp: Date.now(),
             color: color
         };
         activities.unshift(newAct);
@@ -105,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const colorMap = {
             emerald: "text-emerald-500",
-            blue: "text-blue-500",
+            blue: "text-pink-500",
             indigo: "text-indigo-500",
             amber: "text-amber-500",
             rose: "text-rose-500",
@@ -115,16 +136,15 @@ document.addEventListener("DOMContentLoaded", () => {
         activities.slice(0, 5).forEach(act => {
             const item = document.createElement("div");
             item.className = "flex items-start gap-3 text-xs leading-relaxed group";
-            const dotClass = colorMap[act.color] || "text-blue-500";
+            const dotClass = colorMap[act.color] || "text-pink-500";
 
             item.innerHTML = `
                 <span class="${dotClass} text-base leading-none font-bold shrink-0 mt-0.5 select-none">&bull;</span>
-                <div class="overflow-hidden">
+                <div class="min-w-0 flex-1">
                     <p class="font-bold text-slate-800 dark:text-slate-200">${escapeHtml(act.title)}</p>
-                    <p class="text-slate-500 dark:text-slate-400 text-[11px] truncate">
-                        <span>${escapeHtml(act.subtitle)}</span>
-                        <span>&nbsp;&middot;&nbsp;</span>
-                        <span>${escapeHtml(act.time)}</span>
+                    <p class="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1 min-w-0">
+                        <span class="truncate">${escapeHtml(act.subtitle)}</span>
+                        <span class="shrink-0">&middot; ${escapeHtml(formatTimeAgo(act.timestamp, act.time))}</span>
                     </p>
                 </div>
             `;
@@ -218,62 +238,79 @@ document.addEventListener("DOMContentLoaded", () => {
         if (emptyState) emptyState.classList.add("hidden");
         if (populatedState) populatedState.classList.remove("hidden");
 
-        // 1. KPI Calculations directly from meeting store data & demo audio
-        const additionalMeetings = Math.max(0, meetings.length - 3);
-        const totalMeetings = 24 + additionalMeetings;
+        // 1. KPI Calculations directly from actual meetings data
+        const totalMeetings = meetings.length;
 
-        let totalDurationMins = 18 * 60 + 42; // 18h 42m from Project Planning demo audio
-        meetings.slice(3).forEach(m => {
-            totalDurationMins += (m.durationMinutes || 15);
+        let totalDurationMins = 0;
+        let totalActions = 0;
+        let openActions = 0;
+        let completedActions = 0;
+        let pendingActions = 0;
+        let totalDecisions = 0;
+
+        meetings.forEach(m => {
+            totalDurationMins += (m.durationMinutes || 0);
+            const bd = m.actionsBreakdown || {};
+            const open = bd.open || 0;
+            const comp = bd.completed || 0;
+            const pend = bd.pending || 0;
+            const sumFromBd = open + comp + pend;
+            const count = m.actionsCount || sumFromBd;
+
+            totalActions += count;
+            if (sumFromBd > 0) {
+                openActions += open;
+                completedActions += comp;
+                pendingActions += pend;
+            } else {
+                openActions += count;
+            }
+            totalDecisions += (m.decisionsCount || 0);
         });
 
         const hours = Math.floor(totalDurationMins / 60);
         const mins = totalDurationMins % 60;
-        const durationStr = `${hours}h ${mins}m`;
-
-        let totalActions = 38;
-        let openActions = 18;
-        let completedActions = 14;
-        let pendingActions = 6;
-        let totalDecisions = 21;
-
-        meetings.slice(3).forEach(m => {
-            const count = m.actionsCount || 0;
-            totalActions += count;
-            openActions += count;
-            totalDecisions += (m.decisionsCount || 0);
-        });
+        const durationStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 
         const metricMeetingsCount = document.getElementById("metricMeetingsCount");
         if (metricMeetingsCount) metricMeetingsCount.textContent = totalMeetings;
 
+        const nowMs = Date.now();
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        const thisWeekCount = meetings.filter(m => {
+            if (m.created_at) {
+                const ts = Date.parse(m.created_at);
+                if (Number.isFinite(ts)) return (nowMs - ts) <= sevenDaysMs;
+            }
+            return m.category === "today" || m.category === "week";
+        }).length;
+
+        const metricMeetingsTrend = document.getElementById("metricMeetingsTrend");
+        if (metricMeetingsTrend) metricMeetingsTrend.textContent = `${thisWeekCount} this week`;
+
         const metricDurationVal = document.getElementById("metricDurationVal");
         if (metricDurationVal) metricDurationVal.textContent = durationStr;
 
+        const avgMins = totalMeetings > 0 ? Math.round(totalDurationMins / totalMeetings) : 0;
+        const metricDurationTrend = document.getElementById("metricDurationTrend");
+        if (metricDurationTrend) metricDurationTrend.textContent = `Avg ${avgMins}m`;
+
         const metricActionsCount = document.getElementById("metricActionsCount");
         if (metricActionsCount) metricActionsCount.textContent = totalActions;
+
+        const metricActionsOpen = document.getElementById("metricActionsOpen");
+        if (metricActionsOpen) metricActionsOpen.textContent = `${Math.max(0, totalActions - completedActions)} open`;
 
         const metricDecisionsCount = document.getElementById("metricDecisionsCount");
         if (metricDecisionsCount) metricDecisionsCount.textContent = totalDecisions;
 
         // 2. Action Items Data Layer & Visualization
         function getActionItemsData() {
-            let total = 38;
-            let open = 18;
-            let completed = 14;
-            let pending = 6;
-
-            meetings.slice(3).forEach(m => {
-                const count = m.actionsCount || 0;
-                total += count;
-                open += count;
-            });
-
             return {
-                open: open,
-                completed: completed,
-                pending: pending,
-                total: total
+                open: openActions,
+                completed: completedActions,
+                pending: pendingActions,
+                total: totalActions
             };
         }
 
@@ -394,13 +431,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function hexToRgba(hex, alpha) {
-            if (!hex) return `rgba(37, 99, 235, ${alpha})`;
+            if (!hex) return `rgba(236, 72, 153, ${alpha})`;
             let c = hex.replace("#", "").trim();
             if (c.length === 3) {
                 c = c.split("").map(x => x + x).join("");
             }
             const num = parseInt(c, 16);
-            if (isNaN(num)) return `rgba(37, 99, 235, ${alpha})`;
+            if (isNaN(num)) return `rgba(236, 72, 153, ${alpha})`;
             const r = (num >> 16) & 255;
             const g = (num >> 8) & 255;
             const b = num & 255;
@@ -411,7 +448,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const wrapper = document.getElementById("activityChartCanvasWrapper");
             if (!wrapper) return;
             const isDark = document.documentElement.classList.contains("dark");
-            const accentHex = getComputedStyle(document.documentElement).getPropertyValue("--theme-accent").trim() || "#2563eb";
+            const accentHex = getComputedStyle(document.documentElement).getPropertyValue("--theme-accent").trim() || "#ec4899";
             const data = (activityData && activityData.data) ? activityData.data : [3, 5, 8, 5, 3];
             const labels = (activityData && activityData.labels) ? activityData.labels : ["Mon", "Tue", "Wed", "Thu", "Fri"];
             const maxVal = Math.max(...data, 10);
@@ -507,7 +544,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const isDark = document.documentElement.classList.contains("dark");
-            const accentHex = getComputedStyle(document.documentElement).getPropertyValue("--theme-accent").trim() || "#2563eb";
+            const accentHex = getComputedStyle(document.documentElement).getPropertyValue("--theme-accent").trim() || "#ec4899";
 
             const ctx = canvas.getContext("2d");
             const chartHeight = Math.max(canvas.clientHeight || 180, 180);
@@ -652,6 +689,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 activityChartInstance.options.scales.y.suggestedMax = chartConfig.options.scales.y.suggestedMax;
                 activityChartInstance.update();
             } else {
+                const existingChart = typeof Chart.getChart === "function" ? Chart.getChart(canvas) : null;
+                if (existingChart) existingChart.destroy();
                 activityChartInstance = new Chart(ctx, chartConfig);
             }
         }
@@ -716,7 +755,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const recentSlice = meetings.slice(0, 5);
             recentSlice.forEach((m, idx) => {
                 const palette = [
-                    { bg: "bg-blue-50 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400", hover: "group-hover:text-blue-600 dark:group-hover:text-blue-400" },
+                    { bg: "bg-pink-50 dark:bg-pink-950/60", text: "text-pink-600 dark:text-pink-400", hover: "group-hover:text-pink-600 dark:group-hover:text-pink-400" },
                     { bg: "bg-purple-50 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400", hover: "group-hover:text-purple-600 dark:group-hover:text-purple-400" },
                     { bg: "bg-emerald-50 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400", hover: "group-hover:text-emerald-600 dark:group-hover:text-emerald-400" }
                 ];
@@ -739,15 +778,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="flex items-center gap-6 sm:gap-12 shrink-0">
                         <span class="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 font-mono">${escapeHtml(m.duration || "15m")}</span>
                         <span class="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">${m.actionsCount || 0} actions</span>
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/50 group-hover:translate-x-0.5 transition">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-pink-600 group-hover:bg-pink-50 dark:group-hover:bg-pink-950/50 group-hover:translate-x-0.5 transition">
                             <span class="font-bold text-base">&rarr;</span>
                         </div>
                     </div>
                 `;
 
                 row.addEventListener("click", () => {
-                    switchView("viewWorkspace");
-                    loadDemoMeeting();
+                    if (typeof window.openSavedMeeting === "function") {
+                        window.openSavedMeeting(m);
+                    }
                 });
 
                 recentMeetingsContainer.appendChild(row);
@@ -757,67 +797,23 @@ document.addEventListener("DOMContentLoaded", () => {
         renderRecentActivity();
     }
 
-    // Meeting Archive State & Organization Controls
-    let activeDateFilter = "all";
-    let activeTagPill = "all";
-    let activeSortOrder = "newest";
-    let activeDurationFilter = "all";
-    let filterHasActionsOnly = false;
-    let filterHasDecisionsOnly = false;
-
-    const meetingCardsList = document.getElementById("meetingCardsList");
-    const meetingSearchInput = document.getElementById("meetingSearchInput");
-    const meetingDateSelect = document.getElementById("meetingDateSelect");
-    const meetingSortSelect = document.getElementById("meetingSortSelect");
-    const meetingDurationSelect = document.getElementById("meetingDurationSelect");
-    const filterHasActionsChip = document.getElementById("filterHasActionsChip");
-    const filterHasDecisionsChip = document.getElementById("filterHasDecisionsChip");
-    const compactMeetingsToggle = document.getElementById("compactMeetingsToggle");
-    const noMeetingsFound = document.getElementById("noMeetingsFound");
     const loadDemoDataBtn = document.getElementById("loadDemoDataBtn");
-
-    // Modal elements for Rename and Tag
-    const renameMeetingModal = document.getElementById("renameMeetingModal");
-    const renameMeetingInput = document.getElementById("renameMeetingInput");
-    const renameMeetingId = document.getElementById("renameMeetingId");
-    const closeRenameModalBtn = document.getElementById("closeRenameModalBtn");
-    const cancelRenameBtn = document.getElementById("cancelRenameBtn");
-    const saveRenameBtn = document.getElementById("saveRenameBtn");
-
-    const addTagModal = document.getElementById("addTagModal");
-    const customTagInput = document.getElementById("customTagInput");
-    const tagMeetingId = document.getElementById("tagMeetingId");
-    const closeTagModalBtn = document.getElementById("closeTagModalBtn");
-    const cancelTagBtn = document.getElementById("cancelTagBtn");
-    const saveTagBtn = document.getElementById("saveTagBtn");
-
-    const createTagModal = document.getElementById("createTagModal");
-    const addNewCustomTagBtn = document.getElementById("addNewCustomTagBtn");
-    const newTagNameInput = document.getElementById("newTagNameInput");
-    const closeCreateTagModalBtn = document.getElementById("closeCreateTagModalBtn");
-    const cancelCreateTagBtn = document.getElementById("cancelCreateTagBtn");
-    const saveCreateTagBtn = document.getElementById("saveCreateTagBtn");
-
     if (loadDemoDataBtn) {
         loadDemoDataBtn.addEventListener("click", () => {
-            saveStoredMeetings(DEFAULT_MEETINGS_DATA);
-            renderDashboardMetrics();
-            renderMeetingsList();
+            loadDemoMeeting();
         });
     }
 
-
-
     // Dynamic Accent Color Palette definition
     const ACCENT_COLORS = {
-        'blue': {
-            name: 'blue',
-            main: '#2563eb',
-            hover: '#1d4ed8',
-            light: '#eff6ff',
-            shadow: 'rgba(37, 99, 235, 0.25)',
-            ring: 'rgba(37, 99, 235, 0.45)',
-            bgClass: 'bg-blue-600'
+        'pink': {
+            name: 'pink',
+            main: '#ec4899',
+            hover: '#db2777',
+            light: '#fdf2f8',
+            shadow: 'rgba(236, 72, 153, 0.28)',
+            ring: 'rgba(236, 72, 153, 0.45)',
+            bgClass: 'bg-pink-500'
         },
         'indigo': {
             name: 'indigo',
@@ -857,10 +853,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    let currentAccentKey = localStorage.getItem("meetly_accent_color") || "blue";
+    let currentAccentKey = localStorage.getItem("meetly_accent_color") || "pink";
+    if (currentAccentKey === "blue") currentAccentKey = "pink";
 
     function applyAccentColor(accentKey) {
-        const pal = ACCENT_COLORS[accentKey] || ACCENT_COLORS.blue;
+        const pal = ACCENT_COLORS[accentKey] || ACCENT_COLORS.pink;
         currentAccentKey = pal.name;
 
         // 1. Set CSS root variables so the entire application updates instantly
@@ -1195,22 +1192,6 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Error loading saved settings:", e);
     }
 
-
-    function delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    function escapeHtml(str) {
-        if (!str) return "";
-        const div = document.createElement("div");
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function escapeRegex(str) {
-        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
     // Navigation and Multi-View Switcher (Desktop sidebar and Mobile bottom tab bar)
     const VIEW_HASH_MAP = {
         viewDashboard: "dashboard",
@@ -1396,6 +1377,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Render dashboard metrics and charts immediately on initial boot
     renderDashboardMetrics();
+
+    // Sync real meetings from SQLite backend on boot
+    fetch("/api/meetings")
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+            if (data && Array.isArray(data.meetings)) {
+                localStorage.setItem("meetly_cached_meetings", JSON.stringify(data.meetings));
+                renderDashboardMetrics();
+                if (typeof window.renderMeetingsList === "function") window.renderMeetingsList();
+            }
+        })
+        .catch(() => {});
 
     window.addEventListener("hashchange", () => {
         const rawHash = (window.location.hash || "").replace("#", "").toLowerCase();

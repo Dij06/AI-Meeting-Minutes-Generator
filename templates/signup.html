@@ -28,9 +28,9 @@
         }
     </script>
 </head>
-<body class="bg-gradient-to-b from-blue-50/50 via-white to-slate-50 dark:from-[#090d16] dark:via-[#0c101d] dark:to-[#090d16] text-slate-900 dark:text-slate-100 font-sans min-h-screen flex flex-col justify-center items-center px-4 relative overflow-hidden transition-colors duration-200">
+<body class="bg-gradient-to-b from-pink-50/50 via-white to-slate-50 dark:from-[#090d16] dark:via-[#0c101d] dark:to-[#090d16] text-slate-900 dark:text-slate-100 font-sans min-h-screen flex flex-col justify-center items-center px-4 relative overflow-hidden transition-colors duration-200">
     
-    <div class="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] bg-blue-100/50 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] bg-pink-100/50 dark:bg-pink-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
     <div class="absolute bottom-[-100px] right-[-100px] w-[500px] h-[500px] bg-indigo-50/60 dark:bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
 
     <div class="absolute top-6 right-6">
@@ -43,7 +43,7 @@
     <div class="max-w-md w-full relative z-10 my-8">
         <div class="text-center mb-8">
             <a href="/" class="inline-flex items-center gap-3 group">
-                <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-blue-500/25 group-hover:scale-105 transition">
+                <div class="w-10 h-10 rounded-xl bg-pink-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-pink-500/25 group-hover:scale-105 transition">
                     <span>M</span>
                 </div>
                 <span class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Meetly</span>
@@ -57,22 +57,22 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Full Name</label>
                     <input type="text" name="name" placeholder="Your Full Name" required
-                        class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition">
+                        class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-600/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition">
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Email Address</label>
                     <input type="email" name="email" placeholder="name@domain.com" required
-                        class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition">
+                        class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-600/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition">
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Password</label>
                     <input type="password" name="password" placeholder="••••••••" required
-                        class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition">
+                        class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-600/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition">
                 </div>
 
-                <button type="submit" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-sm transition shadow-md shadow-blue-500/25">
+                <button type="submit" class="w-full mt-2 bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 rounded-xl text-sm transition shadow-md shadow-pink-500/25">
                     Create Free Account
                 </button>
             </form>
@@ -93,7 +93,7 @@
             </a>
 
             <p class="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
-                Already have an account? <a href="/login" class="text-blue-600 dark:text-blue-400 hover:underline font-bold">Sign in</a>
+                Already have an account? <a href="/login" class="text-pink-600 dark:text-pink-400 hover:underline font-bold">Sign in</a>
             </p>
         </div>
     </div>
@@ -111,6 +111,12 @@
                 }
             });
         }
+        window.addEventListener('pageshow', (event) => {
+            const nav = performance.getEntriesByType('navigation')[0];
+            if (event.persisted || (nav && nav.type === 'reload')) {
+                document.querySelectorAll('form input').forEach(inp => { inp.value = ''; });
+            }
+        });
     </script>
 </body>
 </html>

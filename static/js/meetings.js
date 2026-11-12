@@ -8,6 +8,27 @@
 window.Meetly = window.Meetly || {};
 
 document.addEventListener("DOMContentLoaded", () => {
+    const renderDashboardMetrics = (...args) => window.renderDashboardMetrics && window.renderDashboardMetrics(...args);
+    const addActivityLog = (...args) => window.addActivityLog && window.addActivityLog(...args);
+    const switchView = (...args) => window.switchView && window.switchView(...args);
+    const loadDemoMeeting = (...args) => window.loadDemoMeeting && window.loadDemoMeeting(...args);
+    let activeDateFilter = "all";
+    const meetingDateSelect = document.getElementById("meetingDateSelect");
+    const meetingCardsList = document.getElementById("meetingCardsList");
+    const meetingSearchInput = document.getElementById("meetingSearchInput");
+    const meetingSortSelect = document.getElementById("meetingSortSelect");
+    const meetingDurationSelect = document.getElementById("meetingDurationSelect");
+    const filterHasActionsChip = document.getElementById("filterHasActionsChip");
+    const filterHasDecisionsChip = document.getElementById("filterHasDecisionsChip");
+    const compactMeetingsToggle = document.getElementById("compactMeetingsToggle");
+    const renameMeetingModal = document.getElementById("renameMeetingModal");
+    const renameMeetingId = document.getElementById("renameMeetingId");
+    const renameMeetingInput = document.getElementById("renameMeetingInput");
+    const closeRenameModalBtn = document.getElementById("closeRenameModalBtn");
+    const cancelRenameBtn = document.getElementById("cancelRenameBtn");
+    const saveRenameBtn = document.getElementById("saveRenameBtn");
+    const resultMeetingTitle = document.getElementById("resultMeetingTitle");
+
     // Unified Meeting Store & Dynamic Dashboard Metrics
     const DEFAULT_MEETINGS_DATA = [
         {
@@ -74,19 +95,19 @@ document.addEventListener("DOMContentLoaded", () => {
             if (raw !== null) {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed)) {
-                    // Backwards compatibility migration
-                    return parsed.map(m => ({
-                        ...m,
-                        tags: Array.isArray(m.tags) ? m.tags : ["Project"],
-                        pinned: typeof m.pinned === "boolean" ? m.pinned : false,
-                        audioSize: m.audioSize || "Audio: 12.4 MB",
-                        fullDate: m.fullDate || m.date || "18 September 2026",
-                        transcript: m.transcript || m.description || ""
-                    }));
+                    return parsed
+                        .filter(m => !["m-1", "m-2", "m-3"].includes(m.id))
+                        .map(m => ({
+                            ...m,
+                            tags: Array.isArray(m.tags) ? m.tags : ["Project"],
+                            pinned: typeof m.pinned === "boolean" ? m.pinned : false,
+                            audioSize: m.audioSize || "Audio: 12.4 MB",
+                            fullDate: m.fullDate || m.date || "18 September 2026",
+                            transcript: m.transcript || m.description || ""
+                        }));
                 }
             }
-            localStorage.setItem("meetly_cached_meetings", JSON.stringify(DEFAULT_MEETINGS_DATA));
-            return DEFAULT_MEETINGS_DATA;
+            return [];
         } catch (e) {
             console.error("Error reading meetings cache:", e);
             return [];
@@ -117,33 +138,48 @@ document.addEventListener("DOMContentLoaded", () => {
             durMins = parseInt(numMatch[1], 10);
         }
 
-        const actions = data.action_items || [];
-        const decisions = data.decisions || [];
+        const actions = Array.isArray(data.action_items) ? data.action_items : [];
+        const rawDecisions = Array.isArray(data.decisions) ? data.decisions : [];
+        const realDecisions = rawDecisions.filter(
+            d => !String(d).toLowerCase().includes("no explicit formal decisions")
+        );
+        const completedCount = actions.filter(a => String(a.status || "").toLowerCase() === "completed").length;
+        const pendingCount = actions.filter(a => String(a.status || "").toLowerCase() === "pending").length;
+        const openCount = Math.max(0, actions.length - completedCount - pendingCount);
         const today = new Date();
         const fullDate = today.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" });
         const audioSize = data.file_size ? `Audio: ${data.file_size}` : (data.audioSize || "Audio: 12.4 MB");
 
         const newMeeting = {
-            id: "m-" + Date.now(),
+            id: data.db_id ? `db-${data.db_id}` : ("m-" + Date.now()),
+            db_id: data.db_id || null,
             title: title || "Project Sync",
+            filename: data.filename || title || "Project_Sync.mp3",
             date: "Today",
             fullDate: fullDate,
-            dayOfWeek: ["Mon", "Tue", "Wed", "Thu", "Fri"].includes(todayDay) ? todayDay : "Wed",
-            duration: `${durMins} min`,
+            dayOfWeek: todayDay,
+            duration: durStr || `${durMins} min`,
             durationMinutes: durMins,
             audioSize: audioSize,
             tags: ["Project"],
             pinned: false,
-            actionsCount: actions.length || 3,
+            actionsCount: actions.length,
             actionsBreakdown: {
-                open: actions.length || 3,
-                completed: 0,
-                pending: 0
+                open: openCount,
+                completed: completedCount,
+                pending: pendingCount
             },
-            decisionsCount: decisions.length || 2,
+            decisionsCount: realDecisions.length,
             category: "today",
-            description: "Audio transcription & AI extraction",
-            transcript: data.transcript || ""
+            description: (data.summary || "Audio transcription & AI extraction").slice(0, 95),
+            summary: data.summary || "",
+            discussion_points: Array.isArray(data.discussion_points) ? data.discussion_points : [],
+            decisions: realDecisions,
+            action_items: actions,
+            utterances: Array.isArray(data.utterances) ? data.utterances : [],
+            statistics: data.statistics || { duration: durStr || `${durMins} min`, word_count: 0, language: "English" },
+            transcript: data.transcript || "",
+            created_at: today.toISOString()
         };
 
         meetings.unshift(newMeeting);
@@ -297,12 +333,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 const isSelected = currentTags.includes(t);
                 btn.className = isSelected
                     ? "tag-select-btn px-3 py-1.5 rounded-xl text-xs font-semibold theme-pill active transition cursor-pointer select-none"
-                    : "tag-select-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition cursor-pointer select-none";
+                    : "tag-select-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-pink-500 transition cursor-pointer select-none";
                 btn.textContent = `#${t}`;
 
                 btn.addEventListener("click", () => {
                     listContainer.querySelectorAll(".tag-select-btn").forEach(b => {
-                        b.className = "tag-select-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition cursor-pointer select-none";
+                        b.className = "tag-select-btn px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-pink-500 transition cursor-pointer select-none";
                     });
                     btn.className = "tag-select-btn px-3 py-1.5 rounded-xl text-xs font-semibold theme-pill active transition cursor-pointer select-none";
                     if (customTagInput) customTagInput.value = t;
@@ -359,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         // Reset active highlight on idea chips
         document.querySelectorAll("#createTagModal .tag-idea-chip").forEach(chip => {
-            chip.classList.remove("theme-pill", "active", "border-blue-500", "text-blue-600", "dark:text-blue-400");
+            chip.classList.remove("theme-pill", "active", "border-pink-500", "text-pink-600", "dark:text-pink-400");
         });
         createTagModal.classList.remove("hidden");
     }
@@ -381,9 +417,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 newTagNameInput.focus();
             }
             document.querySelectorAll("#createTagModal .tag-idea-chip").forEach(c => {
-                c.classList.remove("theme-pill", "active", "border-blue-500", "text-blue-600", "dark:text-blue-400");
+                c.classList.remove("theme-pill", "active", "border-pink-500", "text-pink-600", "dark:text-pink-400");
             });
-            chip.classList.add("theme-pill", "active", "border-blue-500", "text-blue-600", "dark:text-blue-400");
+            chip.classList.add("theme-pill", "active", "border-pink-500", "text-pink-600", "dark:text-pink-400");
         });
     });
 
@@ -565,11 +601,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // 3. Render meeting cards
         filtered.forEach((m, idx) => {
             const card = document.createElement("div");
-            card.className = "meeting-card relative p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800/90 shadow-xs hover:border-blue-500/40 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group";
+            card.className = "meeting-card relative p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800/90 shadow-xs hover:border-pink-500/40 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group";
             card.setAttribute("data-meeting-id", m.id);
 
             const palette = [
-                { bg: "bg-blue-50 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+                { bg: "bg-pink-50 dark:bg-pink-950/60", text: "text-pink-600 dark:text-pink-400" },
                 { bg: "bg-purple-50 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
                 { bg: "bg-emerald-50 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" }
             ];
@@ -590,9 +626,9 @@ document.addEventListener("DOMContentLoaded", () => {
                                     <span>Important Meeting</span>
                                 </span>
                             ` : ''}
-                            <span class="inline-flex items-center text-[11px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-200/80 dark:border-blue-900/60 select-none">#${escapeHtml(primaryTag)}</span>
+                            <span class="inline-flex items-center text-[11px] font-semibold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/60 px-2 py-0.5 rounded-md border border-pink-200/80 dark:border-pink-900/60 select-none">#${escapeHtml(primaryTag)}</span>
                         </div>
-                        <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition truncate cursor-pointer meeting-title-click">
+                        <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 transition truncate cursor-pointer meeting-title-click">
                             ${escapeHtml(m.title)}
                         </h3>
                         <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
@@ -608,7 +644,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <!-- Right: Action items pill, decisions pill, workspace arrow, and 3-dot dropdown menu -->
                 <div class="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/60">
                     <div class="flex items-center gap-1.5">
-                        <span class="px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-900/60 text-xs font-semibold">
+                        <span class="px-2.5 py-1 rounded-full bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400 border border-pink-200/80 dark:border-pink-900/60 text-xs font-semibold">
                             ${m.actionsCount || 0} actions
                         </span>
                         <span class="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-900/60 text-xs font-semibold">
@@ -618,7 +654,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     <div class="flex items-center gap-1.5 relative">
                         <!-- Open workspace arrow -->
-                        <button type="button" class="open-workspace-btn w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-blue-600 dark:hover:bg-blue-600 text-slate-400 hover:text-white flex items-center justify-center transition shadow-xs cursor-pointer" title="Open Meeting Workspace">
+                        <button type="button" class="open-workspace-btn w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-pink-600 dark:hover:bg-pink-600 text-slate-400 hover:text-white flex items-center justify-center transition shadow-xs cursor-pointer" title="Open Meeting Workspace">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         </button>
 
@@ -657,8 +693,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Card click & workspace trigger
             const openAction = () => {
-                switchView("viewWorkspace");
-                loadDemoMeeting();
+                if (typeof window.openSavedMeeting === "function") {
+                    window.openSavedMeeting(m);
+                }
             };
             card.querySelector(".meeting-title-click").addEventListener("click", openAction);
             card.querySelector(".open-workspace-btn").addEventListener("click", openAction);

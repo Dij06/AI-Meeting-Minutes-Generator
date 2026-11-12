@@ -48,6 +48,8 @@ frontend/outputs/*
 *.bak
 *.swp
 *.swo
+*.db
+*.sqlite
 
 # IDE & OS files
 .vscode/
