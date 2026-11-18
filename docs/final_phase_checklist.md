@@ -1,4 +1,4 @@
-﻿# Final Phase Checklist (To Implement at Merging Time)
+# Final Phase Checklist (To Implement at Merging Time)
 
 This document tracks features scheduled for implementation during the final integration phase:
 

@@ -1,0 +1,7 @@
+# Ensure text files have LF line endings in git
+* text=auto eol=lf
+requirements.txt text eol=lf
+*.txt text eol=lf
+*.py text eol=lf
+*.json text eol=lf
+*.md text eol=lf
