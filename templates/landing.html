@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meetly - AI Meeting Minutes Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css?v=4.0">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fdf2f8',
+                            100: '#dbeafe',
+                            500: '#ec4899',
+                            600: '#ec4899',
+                            700: '#db2777',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <style>
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-float-1 { animation: floatSlow 6s ease-in-out infinite; }
+        .animate-float-2 { animation: floatSlow 7s ease-in-out 1s infinite; }
+        .animate-float-3 { animation: floatSlow 6.5s ease-in-out 2s infinite; }
+        .animate-float-4 { animation: floatSlow 7.5s ease-in-out 1.5s infinite; }
+    </style>
+</head>
+<body class="bg-white dark:bg-[#090d16] text-slate-900 dark:text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-pink-100 dark:selection:bg-pink-900 selection:text-pink-800 dark:selection:text-pink-200 antialiased relative overflow-x-hidden transition-colors duration-200">
+
+    <div class="absolute top-0 right-0 w-[400px] sm:w-[650px] h-[400px] sm:h-[650px] bg-gradient-to-bl from-pink-100/60 dark:from-pink-600/15 via-indigo-50/40 dark:via-indigo-500/10 to-transparent rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="absolute top-48 left-[-150px] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-gradient-to-tr from-pink-50/70 dark:from-sky-500/10 via-sky-50/50 dark:via-transparent to-transparent rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+    <header class="w-full max-w-7xl mx-auto px-4 sm:px-10 py-4 sm:py-6 flex items-center justify-between relative z-30">
+        <a href="/" class="flex items-center gap-2.5 sm:gap-3 group">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-pink-600 flex items-center justify-center text-white font-extrabold text-base sm:text-lg shadow-md shadow-pink-500/25 group-hover:scale-105 transition">
+                <span>M</span>
+            </div>
+            <span class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Meetly</span>
+        </a>
+
+        <div class="flex items-center gap-2.5 sm:gap-6">
+            <button id="themeToggleBtn" type="button" aria-label="Toggle Theme" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm">
+                <svg class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <svg class="w-4 h-4 block dark:hidden text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            </button>
+
+            <a href="/login" class="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition px-2 py-1">
+                Sign In
+            </a>
+            <a href="/login" class="inline-flex items-center gap-1.5 sm:gap-2 bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs sm:text-sm px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl shadow-md shadow-pink-500/25 hover:shadow-pink-500/35 hover:-translate-y-0.5 transition">
+                <span>Get Started</span>
+                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-10 pt-4 sm:pt-6 pb-16 relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
+            <div class="lg:col-span-6 flex flex-col items-start text-left z-20">
+                <div class="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold text-pink-600 dark:text-pink-400 bg-pink-50/90 dark:bg-pink-950/60 border border-pink-200/70 dark:border-pink-800/60 mb-4 sm:mb-6 shadow-sm">
+                    <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-pink-600 dark:text-pink-400" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
+                    </svg>
+                    <span class="tracking-wider uppercase">AI-Powered Meeting Minutes</span>
+                </div>
+
+                <h1 class="text-3xl sm:text-5xl lg:text-[62px] font-black text-slate-900 dark:text-white tracking-tight leading-[1.12] sm:leading-[1.08]">
+                    Turn Conversations<br>
+                    into <span class="text-pink-600 dark:text-pink-400">Actionable<br class="hidden sm:inline"> Minutes</span>
+                </h1>
+
+                <p class="mt-4 sm:mt-6 text-slate-600 dark:text-slate-300 text-sm sm:text-base lg:text-lg leading-relaxed max-w-md font-normal">
+                    Upload your meeting recording and let AI transcribe, summarize, and extract what matters &mdash; in seconds.
+                </p>
+
+                <div class="mt-6 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                    <a href="/login" class="inline-flex items-center justify-center gap-2.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold px-6 py-3.5 rounded-xl text-sm sm:text-base shadow-lg shadow-pink-600/25 hover:shadow-pink-600/35 hover:-translate-y-0.5 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        <span>Upload Meeting</span>
+                    </a>
+
+                    <a href="/dashboard?demo=1" class="inline-flex items-center justify-center gap-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold px-6 py-3.5 rounded-xl text-sm sm:text-base border border-slate-200/90 dark:border-slate-800 shadow-sm hover:shadow hover:-translate-y-0.5 transition">
+                        <div class="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center">
+                            <svg class="w-2.5 h-2.5 text-slate-700 dark:text-slate-300 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                        </div>
+                        <span>Try Demo</span>
+                    </a>
+                </div>
+
+                <div class="mt-8 sm:mt-12 grid grid-cols-4 gap-2 sm:gap-6 w-full max-w-lg">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-50 dark:bg-pink-950/60 border border-pink-100 dark:border-pink-900/50 text-pink-600 dark:text-pink-400 flex items-center justify-center mb-2 shadow-sm">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/>
+                            </svg>
+                        </div>
+                        <span class="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">Accurate<br>Transcription</span>
+                    </div>
+
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-50 dark:bg-pink-950/60 border border-pink-100 dark:border-pink-900/50 text-pink-600 dark:text-pink-400 flex items-center justify-center mb-2 shadow-sm">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <span class="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">AI<br>Summaries</span>
+                    </div>
+
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-50 dark:bg-pink-950/60 border border-pink-100 dark:border-pink-900/50 text-pink-600 dark:text-pink-400 flex items-center justify-center mb-2 shadow-sm">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <span class="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">Action<br>Items</span>
+                    </div>
+
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-50 dark:bg-pink-950/60 border border-pink-100 dark:border-pink-900/50 text-pink-600 dark:text-pink-400 flex items-center justify-center mb-2 shadow-sm">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                        </div>
+                        <span class="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">Export<br>PDF/DOCX</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Connected Workflow Illustration -->
+            <div class="lg:col-span-6 relative w-full flex items-center justify-center my-8 lg:my-0 select-none">
+                <div class="relative w-full max-w-[560px] aspect-[560/480] sm:aspect-[560/460]">
+                    <!-- Flowing Wave Streams and Directional Process Curves SVG -->
+                    <svg viewBox="0 0 560 460" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                        <defs>
+                            <!-- Linear Gradient for Accent Highlight Wave -->
+                            <linearGradient id="waveHighlightGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#ec4899" stop-opacity="0.1" />
+                                <stop offset="45%" stop-color="#ec4899" stop-opacity="0.85" />
+                                <stop offset="100%" stop-color="#ec4899" stop-opacity="0.15" />
+                            </linearGradient>
+
+                            <!-- Linear Gradient for Process Flow Arrows -->
+                            <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ec4899" stop-opacity="0.5" />
+                                <stop offset="100%" stop-color="#ec4899" stop-opacity="1" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Background Ambient Horizontal Wave Streams -->
+                        <g class="opacity-75 dark:opacity-60">
+                            <!-- Stream 1 (Top Boundary) -->
+                            <path d="M -20 238 C 130 205, 240 280, 360 230 C 430 200, 500 240, 580 230" 
+                                  class="stroke-slate-200 dark:stroke-slate-800" stroke-width="1.5" stroke-linecap="round" fill="none" />
+
+                            <!-- Stream 2 (Subtle Contour) -->
+                            <path d="M -20 248 C 130 215, 240 290, 360 240 C 430 210, 500 250, 580 240" 
+                                  class="stroke-slate-300/70 dark:stroke-slate-700/70" stroke-width="1.5" stroke-linecap="round" fill="none" />
+
+                            <!-- Stream 3 (Primary Animated Dash Wave Stream) -->
+                            <path d="M -20 258 C 130 225, 240 300, 360 250 C 430 220, 500 260, 580 250" 
+                                  stroke="url(#waveHighlightGrad)" stroke-width="2.2" stroke-linecap="round" fill="none" class="animate-wave-flow" />
+
+                            <!-- Stream 4 (Dotted Micro-Stream) -->
+                            <path d="M -20 268 C 130 235, 240 310, 360 260 C 430 230, 500 270, 580 260" 
+                                  class="stroke-slate-300 dark:stroke-slate-700" stroke-width="1.2" stroke-dasharray="3 4" stroke-linecap="round" fill="none" />
+
+                            <!-- Stream 5 (Bottom Boundary) -->
+                            <path d="M -20 278 C 130 245, 240 320, 360 270 C 430 240, 500 280, 580 270" 
+                                  class="stroke-slate-200 dark:stroke-slate-800" stroke-width="1.5" stroke-linecap="round" fill="none" />
+                        </g>
+
+                        <!-- Directional Process Flow Curves and Arrowheads -->
+                        <!-- Arrow 1: Transcribe -> Summarize -->
+                        <g class="animate-arrow-pulse">
+                            <path d="M 215 56 C 265 24, 320 28, 362 62" 
+                                  stroke="url(#arrowGrad)" stroke-width="2" stroke-linecap="round" fill="none" />
+                            <path d="M 350 54 L 364 64 L 350 70" 
+                                  class="stroke-pink-600 dark:stroke-pink-400" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        </g>
+
+                        <!-- Arrow 2: Summarize -> Extract Action Items -->
+                        <g class="animate-arrow-pulse" style="animation-delay: 0.9s;">
+                            <path d="M 464 150 C 496 180, 492 210, 460 235" 
+                                  stroke="url(#arrowGrad)" stroke-width="2" stroke-linecap="round" fill="none" />
+                            <path d="M 468 223 L 458 236 L 450 224" 
+                                  class="stroke-pink-600 dark:stroke-pink-400" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        </g>
+
+                        <!-- Arrow 3: Extract Action Items -> Export -->
+                        <g class="animate-arrow-pulse" style="animation-delay: 1.8s;">
+                            <path d="M 345 304 C 300 345, 255 352, 218 360" 
+                                  stroke="url(#arrowGrad)" stroke-width="2" stroke-linecap="round" fill="none" />
+                            <path d="M 230 351 L 216 360 L 227 370" 
+                                  class="stroke-pink-600 dark:stroke-pink-400" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        </g>
+
+                        <!-- "Meet Smarter" Accent Graphic with Curved Underline -->
+                        <g transform="translate(60, 310) rotate(-7)">
+                            <text x="0" y="24" class="font-extrabold text-[22px] sm:text-[26px] tracking-tight fill-pink-600/90 dark:fill-pink-400/90" style="font-family: 'Plus Jakarta Sans', sans-serif;">Meet</text>
+                            <text x="14" y="52" class="font-black text-[24px] sm:text-[28px] tracking-tight fill-pink-600 dark:fill-pink-400" style="font-family: 'Plus Jakarta Sans', sans-serif;">Smarter</text>
+                            <!-- Playful Underline Swoosh Curve -->
+                            <path d="M 8 62 C 38 68, 76 66, 110 50" class="stroke-pink-500 dark:stroke-pink-400" stroke-width="3" stroke-linecap="round" fill="none" />
+                        </g>
+                    </svg>
+
+                    <!-- 1. Transcribe Card (Top-Left) -->
+                    <div class="absolute top-[4%] left-[4%] sm:left-[6%] z-10 animate-workflow-float-1 group">
+                        <div class="flex items-center gap-2.5 sm:gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 shadow-md shadow-slate-200/50 dark:shadow-[0_8px_24px_rgba(0,0,0,0.6)] group-hover:border-pink-500/50 group-hover:shadow-pink-500/10 transition-all duration-200">
+                            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-pink-50 dark:bg-pink-950/60 border border-pink-200/60 dark:border-pink-800/60 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 shadow-xs">
+                                <svg class="w-4 h-4 sm:w-4.5 sm:h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                                    <path d="M12 3v18M8 8v8M4 11v2M16 6v12M20 10v4"/>
+                                </svg>
+                            </div>
+                            <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight">Transcribe</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Summarize Card (Upper-Right) -->
+                    <div class="absolute top-[18%] right-[4%] sm:right-[8%] z-10 animate-workflow-float-2 group">
+                        <div class="flex items-center gap-2.5 sm:gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 shadow-md shadow-slate-200/50 dark:shadow-[0_8px_24px_rgba(0,0,0,0.6)] group-hover:border-pink-500/50 group-hover:shadow-pink-500/10 transition-all duration-200">
+                            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-pink-50 dark:bg-pink-950/60 border border-pink-200/60 dark:border-pink-800/60 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 shadow-xs">
+                                <svg class="w-4 h-4 sm:w-4.5 sm:h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                </svg>
+                            </div>
+                            <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight">Summarize</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Extract Action Items Card (Middle-Right) -->
+                    <div class="absolute top-[48%] right-[2%] sm:right-[4%] z-10 animate-workflow-float-3 group">
+                        <div class="flex items-center gap-2.5 sm:gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 shadow-md shadow-slate-200/50 dark:shadow-[0_8px_24px_rgba(0,0,0,0.6)] group-hover:border-pink-500/50 group-hover:shadow-pink-500/10 transition-all duration-200">
+                            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-pink-50 dark:bg-pink-950/60 border border-pink-200/60 dark:border-pink-800/60 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 shadow-xs">
+                                <svg class="w-4 h-4 sm:w-4.5 sm:h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                                    <path d="m9 14 2 2 4-4"/>
+                                </svg>
+                            </div>
+                            <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight">Extract Action Items</span>
+                        </div>
+                    </div>
+
+                    <!-- 4. Export Card (Bottom-Center-Left) -->
+                    <div class="absolute bottom-[6%] left-[26%] sm:left-[32%] z-10 animate-workflow-float-4 group">
+                        <div class="flex items-center gap-2.5 sm:gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 shadow-md shadow-slate-200/50 dark:shadow-[0_8px_24px_rgba(0,0,0,0.6)] group-hover:border-pink-500/50 group-hover:shadow-pink-500/10 transition-all duration-200">
+                            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-pink-50 dark:bg-pink-950/60 border border-pink-200/60 dark:border-pink-800/60 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 shadow-xs">
+                                <svg class="w-4 h-4 sm:w-4.5 sm:h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </div>
+                            <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight">Export</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="mt-20 sm:mt-28 pt-12 sm:pt-16 border-t border-slate-100 dark:border-slate-800/80">
+            <div class="text-center max-w-2xl mx-auto px-2">
+                <span class="text-[11px] sm:text-xs font-bold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/60 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-pink-200/80 dark:border-pink-800/60 uppercase tracking-wider">
+                    Core Capabilities
+                </span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mt-3 sm:mt-4 tracking-tight">
+                    Engineered for high-performing teams
+                </h2>
+                <p class="mt-2.5 sm:mt-3 text-slate-600 dark:text-slate-400 text-xs sm:text-base leading-relaxed">
+                    Turn messy meeting recordings into structured, search-ready minutes with zero manual effort.
+                </p>
+            </div>
+
+            <div class="mt-10 sm:mt-12 grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+                <div class="bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-6 sm:p-7 hover:shadow-md transition">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-pink-600 text-white flex items-center justify-center mb-4 sm:mb-5 font-bold text-sm sm:text-base shadow-md shadow-pink-500/20">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+                    </div>
+                    <h3 class="font-bold text-slate-900 dark:text-white text-base sm:text-lg mb-1.5 sm:mb-2">Acoustic Speech-to-Text</h3>
+                    <p class="text-slate-600 dark:text-slate-400 text-xs sm:text-sm leading-relaxed">
+                        Industry-leading Whisper speech model handles cross-talk, conversational pace, and background noise with precise timestamps.
+                    </p>
+                </div>
+
+                <div class="bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-6 sm:p-7 hover:shadow-md transition">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-pink-600 text-white flex items-center justify-center mb-4 sm:mb-5 font-bold text-sm sm:text-base shadow-md shadow-pink-500/20">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </div>
+                    <h3 class="font-bold text-slate-900 dark:text-white text-base sm:text-lg mb-1.5 sm:mb-2">Intelligent Summarization</h3>
+                    <p class="text-slate-600 dark:text-slate-400 text-xs sm:text-sm leading-relaxed">
+                        Transformer NLP models synthesize long transcripts into executive summaries, key decisions, and action items with clear ownership.
+                    </p>
+                </div>
+
+                <div class="bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-6 sm:p-7 hover:shadow-md transition">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-pink-600 text-white flex items-center justify-center mb-4 sm:mb-5 font-bold text-sm sm:text-base shadow-md shadow-pink-500/20">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </div>
+                    <h3 class="font-bold text-slate-900 dark:text-white text-lg mb-2">Export &amp; Share</h3>
+                    <p class="text-slate-600 dark:text-slate-400 text-xs sm:text-sm leading-relaxed">
+                        Review, edit assignees and deadlines on your live dashboard, then export official PDF and Word DOCX documents with one click.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="border-t border-slate-100 dark:border-slate-800/80 bg-white dark:bg-[#090d16] py-6 sm:py-8 text-center text-xs text-slate-500 dark:text-slate-400 px-4">
+        <p class="font-medium text-slate-600 dark:text-slate-300">&copy; 2026 Meetly &bull; AI Meeting Minutes Platform. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

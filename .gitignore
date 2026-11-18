@@ -1,4 +1,4 @@
-﻿# Virtual Environments
+# Virtual Environments
 venv/
 .venv/
 env/
@@ -11,6 +11,17 @@ __pycache__/
 *$py.class
 *.so
 .pytest_cache/
+.coverage
+htmlcov/
+.cache/
+
+# Model checkpoints & weights (Hugging Face / Whisper)
+models/
+checkpoints/
+*.bin
+*.pt
+*.pth
+*.onnx
 
 # Uploaded meeting files (Audio / Video)
 uploads/*
@@ -27,6 +38,20 @@ frontend/outputs/*
 # Environment variables & API keys
 .env
 *.env
+.env.local
+.env.development
+.env.production
+
+# Temporary & Swap files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.db
+*.sqlite
+*.pem
+*.key
 
 # IDE & OS files
 .vscode/
@@ -34,3 +59,6 @@ frontend/outputs/*
 .DS_Store
 Thumbs.db
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

@@ -1,0 +1,124 @@
+/**
+ * Meetly - Theme & Component Enhancements
+ * Eye-friendly light mode palette, dynamic theme accent tokens, and high-contrast toggle switches.
+ */
+
+:root {
+    --theme-accent: #ec4899;
+    --theme-accent-hover: #db2777;
+    --theme-accent-light: #fdf2f8;
+    --theme-accent-shadow: rgba(236, 72, 153, 0.28);
+    --theme-accent-ring: rgba(236, 72, 153, 0.45);
+}
+
+/* Eye-Friendly Gen-Z Girly Canvas & Typography (Light + Dark) */
+body.meetly-app {
+    background-color: #fdf4f8 !important; /* Soft blush-rose canvas in light mode */
+}
+html.dark body.meetly-app {
+    background-color: #100916 !important; /* Deep plum-obsidian canvas in dark mode */
+}
+
+/* Dynamic theme accent helpers */
+.dashboard-view {
+    margin-top: 0 !important;
+}
+.sidebar-nav-item.active {
+    background: linear-gradient(135deg, var(--theme-accent, #ec4899), #a855f7) !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 18px var(--theme-accent-shadow, rgba(236, 72, 153, 0.28)) !important;
+}
+.sidebar-nav-item.active svg {
+    color: #ffffff !important;
+}
+.theme-pill.active {
+    background: linear-gradient(135deg, var(--theme-accent, #ec4899), #a855f7) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px var(--theme-accent-shadow, rgba(236, 72, 153, 0.28)) !important;
+}
+.theme-btn-primary,
+.btn-theme-accent {
+    background-color: var(--theme-accent, #ec4899) !important;
+    color: #ffffff !important;
+}
+.theme-btn-primary:hover,
+.btn-theme-accent:hover {
+    background-color: var(--theme-accent-hover, #db2777) !important;
+}
+
+/* High-Contrast Dynamic Theme Toggle Switch */
+.theme-toggle-track {
+    background-color: #cbd5e1 !important; /* Visible Slate-300 in light mode */
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-sizing: border-box !important;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+html.dark .theme-toggle-track {
+    background-color: #334155 !important; /* Visible Slate-700 in dark mode */
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* When the toggle checkbox is checked, smoothly illuminate with active theme accent */
+input:checked + .theme-toggle-track {
+    background-color: var(--theme-accent, #2563eb) !important;
+    border-color: var(--theme-accent, #2563eb) !important;
+    box-shadow: 0 2px 8px var(--theme-accent-shadow, rgba(37, 99, 235, 0.35)) !important;
+}
+
+/* Pure elevated white circular knob without ugly borders */
+.theme-toggle-track::after {
+    border: none !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Explicit pixel-perfect knob sliding for standard and compact toggles */
+input:checked + .theme-toggle-track.w-11::after {
+    transform: translateX(20px) !important;
+}
+input:checked + .theme-toggle-track.w-9::after {
+    transform: translateX(16px) !important;
+}
+
+/* Interactive Filter Chips */
+.meeting-filter-chip.active {
+    background-color: var(--theme-accent, #2563eb) !important;
+    color: #ffffff !important;
+    border-color: var(--theme-accent, #2563eb) !important;
+    box-shadow: 0 2px 8px var(--theme-accent-shadow, rgba(37, 99, 235, 0.25)) !important;
+}
+.meeting-filter-chip.active svg {
+    color: #ffffff !important;
+}
+
+/* Custom scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+}
+html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+/* Compact meeting cards layout modifier */
+.meeting-cards-compact .meeting-card {
+    padding: 0.65rem 1rem !important;
+}
+.meeting-cards-compact .meeting-card .meeting-avatar {
+    width: 2rem !important;
+    height: 2rem !important;
+    border-radius: 0.5rem !important;
+}
+.meeting-cards-compact .meeting-card .meeting-avatar svg {
+    width: 1rem !important;
+    height: 1rem !important;
+}
