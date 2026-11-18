@@ -1,0 +1,23 @@
+[project]
+name = "meetly"
+version = "1.0.0"
+description = "AI Meeting Minutes Generator"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "Flask>=3.0.0",
+    "flask-cors>=4.0.0",
+    "gunicorn>=21.2.0",
+    "faster-whisper>=1.0.0",
+    "pydub>=0.25.1",
+    "av>=11.0.0",
+    "imageio-ffmpeg>=0.5.0",
+    "transformers>=4.40.0",
+    "torch",
+    "sentencepiece>=0.2.0",
+    "python-docx>=1.1.0",
+    "reportlab>=4.1.0",
+    "jiwer>=3.0.0",
+    "rouge-score>=0.1.2",
+    "requests>=2.31.0"
+]
