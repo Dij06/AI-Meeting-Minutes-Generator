@@ -1,8 +1,8 @@
-<!-- STUCK LEFT SIDEBAR: Sticky to viewport, never scrolls with content -->
-<aside class="sticky top-0 h-screen w-64 shrink-0 bg-white dark:bg-[#0d121f] border-r border-slate-200/80 dark:border-slate-800 flex flex-col justify-between p-4 z-30 select-none shadow-xs">
+<!-- LEFT SIDEBAR: Drawer on mobile (-translate-x-full), Sticky sidebar on desktop -->
+<aside id="mainAppSidebar" class="fixed lg:sticky top-0 left-0 h-screen w-64 shrink-0 bg-white dark:bg-[#0d121f] border-r border-slate-200/80 dark:border-slate-800 flex flex-col justify-between p-4 z-40 select-none shadow-xs -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
     <div class="space-y-6">
-        <!-- Brand Logo -->
-        <div class="px-2 pt-1">
+        <!-- Brand Logo and Mobile Close Button -->
+        <div class="px-2 pt-1 flex items-center justify-between">
             <a href="/" class="flex items-center gap-2 group">
                 <div class="w-9 h-9 rounded-xl bg-pink-600 flex items-center justify-center text-white font-extrabold text-sm shadow-sm group-hover:scale-105 transition">
                     M
@@ -10,6 +10,9 @@
                 <span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Meetly</span>
                 <span class="text-[10px] font-semibold bg-pink-50 text-pink-600 dark:bg-pink-950/60 dark:text-pink-400 border border-pink-200 dark:border-pink-800/80 px-1.5 py-0.5 rounded-md ml-0.5">Minutes AI</span>
             </a>
+            <button id="closeMobileSidebarBtn" type="button" aria-label="Close sidebar" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
 
         <!-- Navigation Links -->
@@ -48,7 +51,7 @@
                 <p class="text-[11px] text-slate-400 truncate">{{ user.email or 'guest@demo.com' }}</p>
             </div>
         </div>
-        <a href="/logout" title="Sign out" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0">
+        <a href="/logout" id="logoutLink" title="Sign out" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0 cursor-pointer">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
         </a>
     </div>

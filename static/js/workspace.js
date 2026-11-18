@@ -8,6 +8,18 @@
 window.Meetly = window.Meetly || {};
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Safe inter-module function delegations
+    const addActivityLog = (...args) => {
+        if (typeof window.addActivityLog === "function") return window.addActivityLog(...args);
+        if (typeof window.Meetly?.addActivityLog === "function") return window.Meetly.addActivityLog(...args);
+        console.log("[ActivityLog]", ...args);
+    };
+
+    const recordNewMeetingIntoHistory = (...args) => {
+        if (typeof window.recordNewMeetingIntoHistory === "function") return window.recordNewMeetingIntoHistory(...args);
+        if (typeof window.Meetly?.recordNewMeetingIntoHistory === "function") return window.Meetly.recordNewMeetingIntoHistory(...args);
+    };
+
     // Initial upload and microphone controls
     const uploadInitialState = document.getElementById("uploadInitialState");
     const uploadProcessingState = document.getElementById("uploadProcessingState");
@@ -676,9 +688,40 @@ document.addEventListener("DOMContentLoaded", () => {
             if (mins || secs) durationSeconds = mins * 60 + secs;
         }
 
-        // If audio preview is not loaded (e.g. demo data), attach playable audio
-        if (!selectedAudioFile || !audioPreview.src) {
+        // If real audio URL is provided (e.g. sample demo recordings), attach directly to player
+        if (data.audio_url) {
+            if (audioPreview) {
+                audioPreview.pause();
+                audioPreview.currentTime = 0;
+                audioPreview.src = data.audio_url;
+                audioPreview.load();
+                if (audioScrubber) audioScrubber.value = 0;
+                if (audioCurrentTime) audioCurrentTime.textContent = "00:00";
+                setPlayPauseIcon(false);
+            }
+        } else if (!selectedAudioFile || !audioPreview.src) {
             ensurePlayableAudioTrack(durationSeconds);
+        }
+
+        // Demo Mode recording switcher banner
+        const demoModeBanner = document.getElementById("demoModeBanner");
+        if (demoModeBanner) {
+            if (data.is_demo || data.audio_url) {
+                demoModeBanner.classList.remove("hidden");
+                const currentLang = (stats.language || data.language || "english").toLowerCase();
+                demoModeBanner.querySelectorAll(".demo-lang-btn").forEach(btn => {
+                    const btnLang = (btn.getAttribute("data-demo-switch") || "").toLowerCase();
+                    const isMatch = (btnLang === currentLang) || 
+                                    (btnLang === "auto" && (currentLang === "auto" || currentLang === "auto-detect" || currentLang === "hinglish"));
+                    if (isMatch) {
+                        btn.className = "demo-lang-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer select-none bg-pink-600 text-white border-pink-600 shadow-sm";
+                    } else {
+                        btn.className = "demo-lang-btn px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer select-none bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-pink-500 shadow-2xs";
+                    }
+                });
+            } else {
+                demoModeBanner.classList.add("hidden");
+            }
         }
 
         // Top Header
@@ -1321,14 +1364,70 @@ document.addEventListener("DOMContentLoaded", () => {
         renderTwoPanelWorkspace(payload);
     }
 
+    // Dedicated standalone demo recording switcher
+    async function switchDemoRecording(lang = "english") {
+        try {
+            const normalizedLang = (lang || "english").toLowerCase();
+            window._isDemoModeActive = true;
+            window._activeDemoLang = normalizedLang;
+            
+            // Highlight clicked button immediately for snappy UI feedback
+            const demoModeBanner = document.getElementById("demoModeBanner");
+            if (demoModeBanner) {
+                demoModeBanner.querySelectorAll(".demo-lang-btn").forEach(btn => {
+                    const btnLang = (btn.getAttribute("data-demo-switch") || "").toLowerCase();
+                    const isMatch = (btnLang === normalizedLang) || 
+                                    (btnLang === "auto" && (normalizedLang === "auto" || normalizedLang === "auto-detect" || normalizedLang === "hinglish"));
+                    if (isMatch) {
+                        btn.className = "demo-lang-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer select-none bg-pink-600 text-white border-pink-600 shadow-sm";
+                    } else {
+                        btn.className = "demo-lang-btn px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer select-none bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-pink-500 shadow-2xs";
+                    }
+                });
+            }
+
+            const res = await fetch(`/api/demo?lang=${encodeURIComponent(normalizedLang)}`);
+            const result = await res.json();
+            if (result.status === "success" && result.data) {
+                const data = result.data;
+                data.is_demo = true;
+                renderTwoPanelWorkspace(data);
+                
+                const minutesOutputContainer = document.getElementById("minutesOutputContainer");
+                if (minutesOutputContainer) minutesOutputContainer.style.display = "block";
+                
+                try {
+                    localStorage.setItem("meetly_active_meeting", JSON.stringify(data));
+                } catch(e) {}
+            }
+        } catch (err) {
+            console.error("Failed to switch demo recording:", err);
+        }
+    }
+
+    // Global click delegation for demo recording switchers
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest(".demo-lang-btn, [data-demo-switch]");
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const lang = btn.getAttribute("data-demo-switch") || "english";
+            switchDemoRecording(lang);
+        }
+    });
+
 // Expose workspace functions globally and on window.Meetly
     window.renderTwoPanelWorkspace = renderTwoPanelWorkspace;
     window.resetNewMeetingWorkspace = resetNewMeetingWorkspace;
     window.prepareExportPayload = prepareExportPayload;
     window.openSavedMeeting = openSavedMeeting;
+    window.switchDemoRecording = switchDemoRecording;
+    window.loadDemoMeeting = switchDemoRecording;
 
     window.Meetly.renderTwoPanelWorkspace = renderTwoPanelWorkspace;
     window.Meetly.resetNewMeetingWorkspace = resetNewMeetingWorkspace;
     window.Meetly.prepareExportPayload = prepareExportPayload;
     window.Meetly.openSavedMeeting = openSavedMeeting;
+    window.Meetly.switchDemoRecording = switchDemoRecording;
+    window.Meetly.loadDemoMeeting = switchDemoRecording;
 });

@@ -13,6 +13,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const switchView = (...args) => window.switchView && window.switchView(...args);
     const loadDemoMeeting = (...args) => window.loadDemoMeeting && window.loadDemoMeeting(...args);
     let activeDateFilter = "all";
+    let activeTagPill = "all";
+    let activeDurationFilter = "all";
+    let activeSortOrder = "newest";
+    let filterHasActionsOnly = false;
+    let filterHasDecisionsOnly = false;
     const meetingDateSelect = document.getElementById("meetingDateSelect");
     const meetingCardsList = document.getElementById("meetingCardsList");
     const meetingSearchInput = document.getElementById("meetingSearchInput");
@@ -29,61 +34,70 @@ document.addEventListener("DOMContentLoaded", () => {
     const saveRenameBtn = document.getElementById("saveRenameBtn");
     const resultMeetingTitle = document.getElementById("resultMeetingTitle");
 
-    // Unified Meeting Store & Dynamic Dashboard Metrics
+    // Unified Meeting Store & Dynamic Dashboard Metrics with 3 playable demo recordings
     const DEFAULT_MEETINGS_DATA = [
         {
             id: "m-1",
-            title: "Project Discussion",
+            title: "Product Sprint Sync (English)",
+            filename: "meeting_english.mp3",
+            audio_url: "/static/audio/meeting_english.mp3",
+            demo_lang: "english",
             date: "Today",
-            fullDate: "18 September 2026",
+            fullDate: "18 November 2026",
             dayOfWeek: "Wed",
-            duration: "42 min",
-            durationMinutes: 42,
-            audioSize: "Audio: 12.4 MB",
-            tags: ["Project"],
+            duration: "0m 20s",
+            durationMinutes: 1,
+            audioSize: "Audio: 0.16 MB",
+            tags: ["Project", "English"],
             pinned: true,
-            actionsCount: 8,
-            actionsBreakdown: { open: 4, completed: 3, pending: 1 },
-            decisionsCount: 5,
+            actionsCount: 2,
+            actionsBreakdown: { open: 1, completed: 0, pending: 1 },
+            decisionsCount: 2,
             category: "today",
-            description: "Architecture & sprint roadmap",
-            transcript: "Let's review the frontend architecture and deployment pipeline for the meeting summarizer. We need the Whisper transcription model and LLM extraction integrated by Friday."
+            description: "Finalized dashboard UI; Sarah completes frontend (Friday), John reviews backend (tomorrow).",
+            transcript: "Good morning everyone. Welcome to our weekly project sync. Today we agreed to finalize the dashboard design. Sarah will complete the front-end components by Friday. John must review the back-end of the integration by tomorrow. We also approved the launch timeline for next week."
         },
         {
             id: "m-2",
-            title: "Team Meeting",
+            title: "प्रोजेक्ट बैठक (Hindi Sync)",
+            filename: "meeting_hindi.mp3",
+            audio_url: "/static/audio/meeting_hindi.mp3",
+            demo_lang: "hindi",
             date: "Yesterday",
-            fullDate: "17 September 2026",
+            fullDate: "17 November 2026",
             dayOfWeek: "Tue",
-            duration: "31 min",
-            durationMinutes: 31,
-            audioSize: "Audio: 8.7 MB",
-            tags: ["Team"],
+            duration: "0m 21s",
+            durationMinutes: 1,
+            audioSize: "Audio: 0.17 MB",
+            tags: ["Team", "Hindi"],
             pinned: false,
-            actionsCount: 4,
-            actionsBreakdown: { open: 2, completed: 1, pending: 1 },
-            decisionsCount: 3,
+            actionsCount: 2,
+            actionsBreakdown: { open: 1, completed: 0, pending: 1 },
+            decisionsCount: 1,
             category: "week",
-            description: "Weekly sprint review & blockers",
-            transcript: "Good morning team, let's go over the sprint progress, API response times, and UI component refactor. Testing coverage has increased to 92%."
+            description: "मोबाइल ऐप रिलीज; राहुल का डेटाबेस कार्य (शुक्रवार) और प्रिया की डिज़ाइन समीक्षा (कल शाम)।",
+            transcript: "नमस्ते टीम। आज की प्रोजेक्ट बैठक में आपका स्वागत है। हमने फैसला किया है कि नया मोबाइल ऐप अगले महीने लॉन्च होगा। राहुल शुक्रवार तक डेटाबेस का काम पूरा करेंगे। प्रिया कल शाम तक डिज़ाइन की समीक्षा करेंगी। हम सभी इस योजना पर सहमत हैं।"
         },
         {
             id: "m-3",
-            title: "Client Discussion",
-            date: "15 Sep",
-            fullDate: "15 September 2026",
-            dayOfWeek: "Mon",
-            duration: "52 min",
-            durationMinutes: 52,
-            audioSize: "Audio: 16.1 MB",
-            tags: ["Client"],
+            title: "Sprint Planning (Auto / Hinglish)",
+            filename: "meeting_auto.mp3",
+            audio_url: "/static/audio/meeting_auto.mp3",
+            demo_lang: "auto",
+            date: "15 Nov",
+            fullDate: "15 November 2026",
+            dayOfWeek: "Sat",
+            duration: "0m 24s",
+            durationMinutes: 1,
+            audioSize: "Audio: 0.19 MB",
+            tags: ["Client", "Auto"],
             pinned: false,
-            actionsCount: 6,
-            actionsBreakdown: { open: 3, completed: 2, pending: 1 },
-            decisionsCount: 4,
+            actionsCount: 3,
+            actionsBreakdown: { open: 2, completed: 0, pending: 1 },
+            decisionsCount: 1,
             category: "month",
-            description: "Deliverables & feature sign-off",
-            transcript: "Welcome everyone. In this session we are reviewing the client deliverables, audio upload specifications, and security compliance sign-off."
+            description: "PostgreSQL selection; Vikram finishes auth (Wednesday), Sneha completes testing (Friday).",
+            transcript: "Hello team, good morning. Aaj ki meeting ka main agenda sprint planning hai. Humne decide kiya hai ki hum PostgreSQL database use karenge. Vikram will finish the authentication module by Wednesday. Sneha needs to complete the front-end testing by Friday. Sabhi log documentation review kar lena."
         }
     ];
 
@@ -471,10 +485,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const target = meetings.find(m => m.id === id);
         if (!target) return;
 
-        if (confirm(`Are you sure you want to delete "${target.title}"?`)) {
+        const confirmMsg = `Are you sure you want to delete "${target.title}"?\n\nThis recording will be removed from your active list immediately and permanently purged from Supabase and cloud storage after 7 days.`;
+        if (confirm(confirmMsg)) {
+            const numericId = target.db_id || (typeof target.id === "string" && target.id.startsWith("db-") ? parseInt(target.id.replace("db-", ""), 10) : (typeof target.id === "number" ? target.id : null));
+            if (numericId) {
+                fetch(`/api/meetings/${numericId}`, { method: "DELETE" })
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log("[Retention Policy] Recording scheduled for permanent purge:", data);
+                    })
+                    .catch(err => console.warn("[Retention Policy] Delete sync warning:", err));
+            }
             const updated = meetings.filter(m => m.id !== id);
             saveStoredMeetings(updated);
-            addActivityLog("Meeting deleted", target.title, "Just now", "rose");
+            addActivityLog("Recording scheduled for deletion", target.title, "7-day retention", "rose");
             renderDashboardMetrics();
             renderMeetingsList();
         }
@@ -693,7 +717,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Card click & workspace trigger
             const openAction = () => {
-                if (typeof window.openSavedMeeting === "function") {
+                if (m.demo_lang && typeof window.loadDemoMeeting === "function") {
+                    window.loadDemoMeeting(m.demo_lang);
+                } else if (typeof window.openSavedMeeting === "function") {
                     window.openSavedMeeting(m);
                 }
             };

@@ -50,6 +50,8 @@ frontend/outputs/*
 *.swo
 *.db
 *.sqlite
+*.pem
+*.key
 
 # IDE & OS files
 .vscode/

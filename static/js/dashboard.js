@@ -31,52 +31,56 @@ window.Meetly.escapeRegex = escapeRegex;
 window.Meetly.delay = delay;
 
 document.addEventListener("DOMContentLoaded", () => {
-    const DEFAULT_ACTIVITY_DATA = [
-        {
-            id: "act-1",
-            title: "Meeting processed",
-            subtitle: "Project Discussion",
-            time: "2 minutes ago",
-            color: "emerald"
-        },
-        {
-            id: "act-2",
-            title: "Minutes exported",
-            subtitle: "Team Meeting",
-            time: "1 hour ago",
-            color: "blue"
-        },
-        {
-            id: "act-3",
-            title: "Action item completed",
-            subtitle: "Complete frontend",
-            time: "3 hours ago",
-            color: "indigo"
-        }
-    ];
+    // Supabase Session & Logout Handler
+    const logoutLink = document.getElementById("logoutLink");
+    if (logoutLink) {
+        logoutLink.addEventListener("click", async (e) => {
+            e.preventDefault();
+            if (window.MeetlyAuth) {
+                await window.MeetlyAuth.signOut();
+            } else {
+                window.location.href = "/logout";
+            }
+        });
+    }
+
+    // Keep persistent Supabase session verified and in sync
+    if (window.MeetlyAuth) {
+        window.MeetlyAuth.getSession().then(session => {
+            if (session) {
+                window.MeetlyAuth.syncSessionToBackend(session);
+            }
+        }).catch(() => {});
+    }
+
+    function _getActivityKey() {
+        const email = (window._currentUserEmail || "guest@meetly.app").trim().toLowerCase();
+        return `meetly_activity_log_${email}`;
+    }
+
+    const MOCK_ACTIVITY_IDS = ["act-1", "act-2", "act-3"];
+    const MOCK_ACTIVITY_SUBTITLES = ["Project Discussion", "Team Meeting", "Complete frontend"];
 
     function getStoredActivities() {
         try {
-            const raw = localStorage.getItem("meetly_activity_log");
+            const raw = localStorage.getItem(_getActivityKey());
             if (raw !== null) {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed)) {
-                    return parsed.filter(a => !["act-1", "act-2", "act-3"].includes(a.id));
+                    return parsed.filter(a => !MOCK_ACTIVITY_IDS.includes(a.id) && !MOCK_ACTIVITY_SUBTITLES.includes(a.subtitle));
                 }
             }
             return [];
         } catch (e) {
-            console.error("Error reading activity log:", e);
             return [];
         }
     }
 
     function saveStoredActivities(activities) {
         try {
-            localStorage.setItem("meetly_activity_log", JSON.stringify(activities));
-        } catch (e) {
-            console.error("Error saving activity log:", e);
-        }
+            const clean = (activities || []).filter(a => !MOCK_ACTIVITY_IDS.includes(a.id) && !MOCK_ACTIVITY_SUBTITLES.includes(a.subtitle));
+            localStorage.setItem(_getActivityKey(), JSON.stringify(clean));
+        } catch (e) {}
     }
 
     function formatTimeAgo(timestamp, fallback) {
@@ -154,73 +158,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+    function _getMeetingsKey() {
+        const email = (window._currentUserEmail || "guest@meetly.app").trim().toLowerCase();
+        return `meetly_cached_meetings_${email}`;
+    }
+
+    const MOCK_TITLES = ["Project Discussion", "Team Meeting", "Client Discussion"];
+    const MOCK_IDS = ["m-1", "m-2", "m-3"];
+
     function getStoredMeetings() {
-        if (typeof window.getStoredMeetings === "function") {
+        if (typeof window.getStoredMeetings === "function" && window.getStoredMeetings !== getStoredMeetings) {
             try {
                 const list = window.getStoredMeetings();
-                if (Array.isArray(list) && list.length > 0) return list;
+                if (Array.isArray(list)) return list.filter(m => !MOCK_IDS.includes(m.id) && !MOCK_TITLES.includes(m.title));
             } catch (e) {}
         }
         try {
-            const raw = localStorage.getItem("meetly_cached_meetings");
+            const raw = localStorage.getItem(_getMeetingsKey());
             if (raw !== null) {
                 const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(m => !MOCK_IDS.includes(m.id) && !MOCK_TITLES.includes(m.title));
+                }
             }
         } catch (e) {}
-        return [
-            {
-                id: "m-1",
-                title: "Project Discussion",
-                date: "Today",
-                fullDate: "18 September 2026",
-                dayOfWeek: "Wed",
-                duration: "42 min",
-                durationMinutes: 42,
-                audioSize: "Audio: 12.4 MB",
-                tags: ["Project"],
-                pinned: true,
-                actionsCount: 8,
-                actionsBreakdown: { open: 4, completed: 3, pending: 1 },
-                decisionsCount: 5,
-                category: "today",
-                description: "Architecture & sprint roadmap"
-            },
-            {
-                id: "m-2",
-                title: "Team Meeting",
-                date: "Yesterday",
-                fullDate: "17 September 2026",
-                dayOfWeek: "Tue",
-                duration: "31 min",
-                durationMinutes: 31,
-                audioSize: "Audio: 8.7 MB",
-                tags: ["Team"],
-                pinned: false,
-                actionsCount: 4,
-                actionsBreakdown: { open: 2, completed: 1, pending: 1 },
-                decisionsCount: 3,
-                category: "week",
-                description: "Weekly sprint review & blockers"
-            },
-            {
-                id: "m-3",
-                title: "Client Discussion",
-                date: "15 Sep",
-                fullDate: "15 September 2026",
-                dayOfWeek: "Mon",
-                duration: "52 min",
-                durationMinutes: 52,
-                audioSize: "Audio: 16.1 MB",
-                tags: ["Client"],
-                pinned: false,
-                actionsCount: 6,
-                actionsBreakdown: { open: 3, completed: 2, pending: 1 },
-                decisionsCount: 4,
-                category: "month",
-                description: "Deliverables & feature sign-off"
-            }
-        ];
+        return [];
     }
 
     function renderDashboardMetrics() {
@@ -386,47 +348,18 @@ document.addEventListener("DOMContentLoaded", () => {
         let currentActivityRange = "this_week";
 
         function getMeetingActivityDemoData(range = "this_week") {
-            const datasets = {
-                this_week: {
-                    labels: ["Mon", "Tue", "Wed", "Thu", "Fri"],
-                    data: [3, 5, 8, 5, 3]
-                },
-                last_week: {
-                    labels: ["Mon", "Tue", "Wed", "Thu", "Fri"],
-                    data: [4, 6, 5, 7, 4]
-                },
-                last_30_days: {
-                    labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
-                    data: [18, 24, 21, 26]
-                },
-                last_90_days: {
-                    labels: ["Month 1", "Month 2", "Month 3"],
-                    data: [65, 82, 78]
+            const counts = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0 };
+            meetings.forEach(m => {
+                if (m.dayOfWeek && counts[m.dayOfWeek] !== undefined) {
+                    counts[m.dayOfWeek] += 1;
                 }
-            };
-
-            const selected = datasets[range] || datasets.this_week;
-
-            if (range === "this_week") {
-                const counts = { Mon: 3, Tue: 5, Wed: 8, Thu: 5, Fri: 3 };
-                meetings.slice(3).forEach(m => {
-                    if (m.dayOfWeek && counts[m.dayOfWeek] !== undefined) {
-                        counts[m.dayOfWeek] += 1;
-                    }
-                });
-                const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-                const dayData = dayLabels.map(d => counts[d]);
-                return {
-                    labels: dayLabels,
-                    data: dayData,
-                    totalMeetings: dayData.reduce((a, b) => a + b, 0)
-                };
-            }
-
+            });
+            const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+            const dayData = dayLabels.map(d => counts[d]);
             return {
-                labels: [...selected.labels],
-                data: [...selected.data],
-                totalMeetings: selected.data.reduce((a, b) => a + b, 0)
+                labels: dayLabels,
+                data: dayData,
+                totalMeetings: dayData.reduce((a, b) => a + b, 0)
             };
         }
 
@@ -449,7 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!wrapper) return;
             const isDark = document.documentElement.classList.contains("dark");
             const accentHex = getComputedStyle(document.documentElement).getPropertyValue("--theme-accent").trim() || "#ec4899";
-            const data = (activityData && activityData.data) ? activityData.data : [3, 5, 8, 5, 3];
+            const data = (activityData && activityData.data) ? activityData.data : [0, 0, 0, 0, 0];
             const labels = (activityData && activityData.labels) ? activityData.labels : ["Mon", "Tue", "Wed", "Thu", "Fri"];
             const maxVal = Math.max(...data, 10);
             
@@ -752,55 +685,111 @@ document.addEventListener("DOMContentLoaded", () => {
         const recentMeetingsContainer = document.getElementById("recentMeetingsContainer");
         if (recentMeetingsContainer) {
             recentMeetingsContainer.innerHTML = "";
-            const recentSlice = meetings.slice(0, 5);
-            recentSlice.forEach((m, idx) => {
-                const palette = [
-                    { bg: "bg-pink-50 dark:bg-pink-950/60", text: "text-pink-600 dark:text-pink-400", hover: "group-hover:text-pink-600 dark:group-hover:text-pink-400" },
-                    { bg: "bg-purple-50 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400", hover: "group-hover:text-purple-600 dark:group-hover:text-purple-400" },
-                    { bg: "bg-emerald-50 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400", hover: "group-hover:text-emerald-600 dark:group-hover:text-emerald-400" }
-                ];
-                const theme = palette[idx % palette.length];
-
-                const row = document.createElement("div");
-                row.className = "recent-meeting-item py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 px-3 rounded-xl transition cursor-pointer group";
-                row.setAttribute("data-meeting-id", m.id);
-
-                row.innerHTML = `
-                    <div class="flex items-center gap-3.5 min-w-0">
-                        <div class="w-9 h-9 rounded-xl ${theme.bg} ${theme.text} flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m14 0a7 7 0 01-14 0m7 7v4m-4 0h8m-4-11a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z"/></svg>
+            if (!meetings || meetings.length === 0) {
+                recentMeetingsContainer.innerHTML = `
+                    <div class="py-10 text-center flex flex-col items-center justify-center">
+                        <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m14 0a7 7 0 01-14 0m7 7v4m-4 0h8m-4-11a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z"/></svg>
                         </div>
-                        <div class="truncate">
-                            <span class="text-sm font-bold text-slate-900 dark:text-white ${theme.hover} transition block truncate">${escapeHtml(m.title)}</span>
-                            <span class="text-xs text-slate-400">${escapeHtml(m.description || "Meeting audio & summary")}</span>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-6 sm:gap-12 shrink-0">
-                        <span class="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 font-mono">${escapeHtml(m.duration || "15m")}</span>
-                        <span class="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">${m.actionsCount || 0} actions</span>
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-pink-600 group-hover:bg-pink-50 dark:group-hover:bg-pink-950/50 group-hover:translate-x-0.5 transition">
-                            <span class="font-bold text-base">&rarr;</span>
-                        </div>
+                        <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">No meetings recorded yet</p>
+                        <p class="text-xs text-slate-400 mt-1">Upload an audio recording to see your minutes and action items here.</p>
                     </div>
                 `;
+            } else {
+                const recentSlice = meetings.slice(0, 5);
+                recentSlice.forEach((m, idx) => {
+                    const palette = [
+                        { bg: "bg-pink-50 dark:bg-pink-950/60", text: "text-pink-600 dark:text-pink-400", hover: "group-hover:text-pink-600 dark:group-hover:text-pink-400" },
+                        { bg: "bg-purple-50 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400", hover: "group-hover:text-purple-600 dark:group-hover:text-purple-400" },
+                        { bg: "bg-emerald-50 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400", hover: "group-hover:text-emerald-600 dark:group-hover:text-emerald-400" }
+                    ];
+                    const theme = palette[idx % palette.length];
 
-                row.addEventListener("click", () => {
-                    if (typeof window.openSavedMeeting === "function") {
-                        window.openSavedMeeting(m);
-                    }
+                    const row = document.createElement("div");
+                    row.className = "recent-meeting-item py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 px-3 rounded-xl transition cursor-pointer group";
+                    row.setAttribute("data-meeting-id", m.id);
+
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <div class="w-9 h-9 rounded-xl ${theme.bg} ${theme.text} flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m14 0a7 7 0 01-14 0m7 7v4m-4 0h8m-4-11a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3z"/></svg>
+                            </div>
+                            <div class="truncate">
+                                <span class="text-sm font-bold text-slate-900 dark:text-white ${theme.hover} transition block truncate">${escapeHtml(m.title)}</span>
+                                <span class="text-xs text-slate-400">${escapeHtml(m.description || "Meeting audio & summary")}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-6 sm:gap-12 shrink-0">
+                            <span class="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 font-mono">${escapeHtml(m.duration || "15m")}</span>
+                            <span class="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">${m.actionsCount || 0} actions</span>
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-pink-600 group-hover:bg-pink-50 dark:group-hover:bg-pink-950/50 group-hover:translate-x-0.5 transition">
+                                <span class="font-bold text-base">&rarr;</span>
+                            </div>
+                        </div>
+                    `;
+
+                    row.addEventListener("click", () => {
+                        if (m.demo_lang && typeof window.loadDemoMeeting === "function") {
+                            window.loadDemoMeeting(m.demo_lang);
+                        } else if (typeof window.openSavedMeeting === "function") {
+                            window.openSavedMeeting(m);
+                        }
+                    });
+
+                    recentMeetingsContainer.appendChild(row);
                 });
-
-                recentMeetingsContainer.appendChild(row);
-            });
+            }
         }
 
         renderRecentActivity();
     }
 
+    // Explore Demo Recordings Modal & Actions
+    const demoRecordingsModal = document.getElementById("demoRecordingsModal");
+    const closeDemoModalBtn = document.getElementById("closeDemoModalBtn");
+    const dismissDemoModalBtn = document.getElementById("dismissDemoModalBtn");
+
+    function openDemoRecordingsModal() {
+        if (demoRecordingsModal) {
+            demoRecordingsModal.classList.remove("hidden");
+            document.body.style.overflow = "hidden";
+        }
+    }
+
+    function closeDemoRecordingsModal() {
+        if (demoRecordingsModal) {
+            demoRecordingsModal.classList.add("hidden");
+            document.body.style.overflow = "";
+        }
+    }
+
+    if (closeDemoModalBtn) closeDemoModalBtn.addEventListener("click", closeDemoRecordingsModal);
+    if (dismissDemoModalBtn) dismissDemoModalBtn.addEventListener("click", closeDemoRecordingsModal);
+    if (demoRecordingsModal) {
+        demoRecordingsModal.addEventListener("click", (e) => {
+            if (e.target === demoRecordingsModal) closeDemoRecordingsModal();
+        });
+    }
+
+    document.querySelectorAll(".select-demo-option").forEach(card => {
+        card.addEventListener("click", () => {
+            const lang = card.getAttribute("data-demo-lang") || "english";
+            closeDemoRecordingsModal();
+            loadDemoMeeting(lang);
+        });
+    });
+
     const loadDemoDataBtn = document.getElementById("loadDemoDataBtn");
     if (loadDemoDataBtn) {
         loadDemoDataBtn.addEventListener("click", () => {
-            loadDemoMeeting();
+            openDemoRecordingsModal();
+        });
+    }
+
+    const dashboardDemoBtn = document.getElementById("dashboardDemoBtn");
+    if (dashboardDemoBtn) {
+        dashboardDemoBtn.addEventListener("click", () => {
+            openDemoRecordingsModal();
         });
     }
 
@@ -813,15 +802,30 @@ document.addEventListener("DOMContentLoaded", () => {
             light: '#fdf2f8',
             shadow: 'rgba(236, 72, 153, 0.28)',
             ring: 'rgba(236, 72, 153, 0.45)',
+            canvas: '#fdf4f8',
+            canvasDark: '#100916',
             bgClass: 'bg-pink-500'
         },
         'indigo': {
             name: 'indigo',
-            main: '#4f46e5',
-            hover: '#4338ca',
-            light: '#eef2ff',
-            shadow: 'rgba(79, 70, 229, 0.25)',
-            ring: 'rgba(79, 70, 229, 0.45)',
+            main: '#2563eb',
+            hover: '#1d4ed8',
+            light: '#eff6ff',
+            shadow: 'rgba(37, 99, 235, 0.28)',
+            ring: 'rgba(37, 99, 235, 0.45)',
+            canvas: '#f8fafc',
+            canvasDark: '#0b0f19',
+            bgClass: 'bg-indigo-600'
+        },
+        'blue': {
+            name: 'indigo',
+            main: '#2563eb',
+            hover: '#1d4ed8',
+            light: '#eff6ff',
+            shadow: 'rgba(37, 99, 235, 0.28)',
+            ring: 'rgba(37, 99, 235, 0.45)',
+            canvas: '#f8fafc',
+            canvasDark: '#0b0f19',
             bgClass: 'bg-indigo-600'
         },
         'purple': {
@@ -829,8 +833,10 @@ document.addEventListener("DOMContentLoaded", () => {
             main: '#9333ea',
             hover: '#7e22ce',
             light: '#faf5ff',
-            shadow: 'rgba(147, 51, 234, 0.25)',
+            shadow: 'rgba(147, 51, 234, 0.28)',
             ring: 'rgba(147, 51, 234, 0.45)',
+            canvas: '#faf5ff',
+            canvasDark: '#120c1f',
             bgClass: 'bg-purple-600'
         },
         'emerald': {
@@ -838,8 +844,10 @@ document.addEventListener("DOMContentLoaded", () => {
             main: '#059669',
             hover: '#047857',
             light: '#ecfdf5',
-            shadow: 'rgba(5, 150, 105, 0.25)',
+            shadow: 'rgba(5, 150, 105, 0.28)',
             ring: 'rgba(5, 150, 105, 0.45)',
+            canvas: '#f0fdf4',
+            canvasDark: '#071510',
             bgClass: 'bg-emerald-600'
         },
         'rose': {
@@ -847,14 +855,15 @@ document.addEventListener("DOMContentLoaded", () => {
             main: '#e11d48',
             hover: '#be123c',
             light: '#fff1f2',
-            shadow: 'rgba(225, 29, 72, 0.25)',
+            shadow: 'rgba(225, 29, 72, 0.28)',
             ring: 'rgba(225, 29, 72, 0.45)',
+            canvas: '#fff5f5',
+            canvasDark: '#1a0b0e',
             bgClass: 'bg-rose-600'
         }
     };
 
     let currentAccentKey = localStorage.getItem("meetly_accent_color") || "pink";
-    if (currentAccentKey === "blue") currentAccentKey = "pink";
 
     function applyAccentColor(accentKey) {
         const pal = ACCENT_COLORS[accentKey] || ACCENT_COLORS.pink;
@@ -866,12 +875,18 @@ document.addEventListener("DOMContentLoaded", () => {
         document.documentElement.style.setProperty('--theme-accent-light', pal.light);
         document.documentElement.style.setProperty('--theme-accent-shadow', pal.shadow);
         document.documentElement.style.setProperty('--theme-accent-ring', pal.ring);
+        document.documentElement.style.setProperty('--theme-canvas', pal.canvas);
+        document.documentElement.style.setProperty('--theme-canvas-dark', pal.canvasDark);
         document.documentElement.setAttribute('data-accent', pal.name);
+        if (document.body) {
+            document.body.setAttribute('data-accent', pal.name);
+        }
 
         // 2. Update active rings and checkmark icon on color buttons
         document.querySelectorAll(".avatar-color-btn").forEach(btn => {
             const colorAttr = btn.getAttribute("data-color");
-            if (colorAttr === pal.name) {
+            const isMatch = (colorAttr === pal.name) || (colorAttr === "indigo" && pal.name === "indigo") || (colorAttr === "blue" && pal.name === "indigo");
+            if (isMatch) {
                 btn.style.outline = `3px solid ${pal.main}`;
                 btn.style.outlineOffset = "2px";
                 btn.innerHTML = `<svg class="w-3.5 h-3.5 text-white mx-auto flex items-center justify-center" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>`;
@@ -911,7 +926,12 @@ document.addEventListener("DOMContentLoaded", () => {
             audioScrubber.style.accentColor = pal.main;
         }
 
-        // 5. Save immediately to localStorage
+        // 5. Re-render charts
+        if (typeof window._refreshMeetingActivityChart === "function") {
+            window._refreshMeetingActivityChart();
+        }
+
+        // 6. Save immediately to localStorage
         localStorage.setItem("meetly_accent_color", pal.name);
     }
 
@@ -982,15 +1002,29 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     if (confirmChangeEmailBtn && settingNewEmail && settingEmail) {
-        confirmChangeEmailBtn.addEventListener("click", () => {
+        confirmChangeEmailBtn.addEventListener("click", async () => {
             const val = settingNewEmail.value.trim();
-            if (val && val.includes("@")) {
-                settingEmail.value = val;
-                changeEmailBox.classList.add("hidden");
-                settingNewEmail.value = "";
-                alert("Email address updated successfully.");
-            } else {
+            if (!val || !val.includes("@")) {
                 alert("Please enter a valid email address.");
+                return;
+            }
+            try {
+                const res = await fetch("/api/user/profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: val })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === "success") {
+                    settingEmail.value = val;
+                    changeEmailBox.classList.add("hidden");
+                    settingNewEmail.value = "";
+                    alert("Email address updated and saved successfully.");
+                } else {
+                    alert(data.message || "Failed to update email.");
+                }
+            } catch (e) {
+                alert("Error connecting to server. Please try again.");
             }
         });
     }
@@ -1015,21 +1049,35 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     if (confirmChangePasswordBtn) {
-        confirmChangePasswordBtn.addEventListener("click", () => {
+        confirmChangePasswordBtn.addEventListener("click", async () => {
             const cur = settingCurrentPassword ? settingCurrentPassword.value : "";
             const nxt = settingNewPassword ? settingNewPassword.value : "";
             if (!cur) {
                 alert("Please enter your current password.");
                 return;
             }
-            if (!nxt || nxt.length < 8) {
-                alert("New password must be at least 8 characters long.");
+            if (!nxt || nxt.length < 6) {
+                alert("New password must be at least 6 characters long.");
                 return;
             }
-            alert("Password updated successfully.");
-            if (settingCurrentPassword) settingCurrentPassword.value = "";
-            if (settingNewPassword) settingNewPassword.value = "";
-            changePasswordBox.classList.add("hidden");
+            try {
+                const res = await fetch("/api/user/password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ current_password: cur, new_password: nxt })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === "success") {
+                    alert(data.message || "Password updated successfully.");
+                    if (settingCurrentPassword) settingCurrentPassword.value = "";
+                    if (settingNewPassword) settingNewPassword.value = "";
+                    changePasswordBox.classList.add("hidden");
+                } else {
+                    alert(data.message || "Failed to update password.");
+                }
+            } catch (e) {
+                alert("Error connecting to server. Please try again.");
+            }
         });
     }
 
@@ -1122,6 +1170,44 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Instant theme mode switching (Light / Dark / System Default)
+    if (settingTheme) {
+        settingTheme.addEventListener("change", () => {
+            const val = settingTheme.value;
+            if (val === "dark") {
+                document.documentElement.classList.add("dark");
+                localStorage.setItem("theme", "dark");
+            } else if (val === "light") {
+                document.documentElement.classList.remove("dark");
+                localStorage.setItem("theme", "light");
+            } else {
+                if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+                    document.documentElement.classList.add("dark");
+                } else {
+                    document.documentElement.classList.remove("dark");
+                }
+                localStorage.removeItem("theme");
+            }
+            if (typeof window._refreshMeetingActivityChart === "function") {
+                window._refreshMeetingActivityChart();
+            }
+        });
+    }
+
+    // Dynamic OS System Theme listener for System Default setting
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+        if (!localStorage.getItem("theme")) {
+            if (e.matches) {
+                document.documentElement.classList.add("dark");
+            } else {
+                document.documentElement.classList.remove("dark");
+            }
+            if (typeof window._refreshMeetingActivityChart === "function") {
+                window._refreshMeetingActivityChart();
+            }
+        }
+    });
+
     if (saveSettingsBtn) {
         saveSettingsBtn.addEventListener("click", () => {
             const settings = {
@@ -1172,15 +1258,62 @@ document.addEventListener("DOMContentLoaded", () => {
                     settingsToast.classList.add("hidden");
                 }, 3000);
             }
+
+            // Sync user name to backend profile if changed
+            if (settingDisplayName) {
+                const newName = settingDisplayName.value.trim();
+                fetch("/api/user/profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: newName })
+                }).then(res => res.json()).then(data => {
+                    if (data && data.status === "success" && data.user) {
+                        const headerName = document.getElementById("headerUserName");
+                        if (headerName) headerName.textContent = data.user.name;
+                        const sidebarName = document.getElementById("sidebarUserName");
+                        if (sidebarName) sidebarName.textContent = data.user.name;
+                    }
+                }).catch(() => {});
+            }
+        });
+    }
+
+    const runAiDiagnosticBtn = document.getElementById("runAiDiagnosticBtn");
+    const aiDiagnosticResult = document.getElementById("aiDiagnosticResult");
+    if (runAiDiagnosticBtn) {
+        runAiDiagnosticBtn.addEventListener("click", async () => {
+            runAiDiagnosticBtn.disabled = true;
+            if (aiDiagnosticResult) aiDiagnosticResult.textContent = "Connecting to Whisper and Summarizer models...";
+            const start = performance.now();
+            try {
+                const res = await fetch("/api/ai-status");
+                const data = await res.json();
+                const latency = Math.round(performance.now() - start);
+                if (data.status === "success" && data.overall_status === "operational") {
+                    if (aiDiagnosticResult) {
+                        aiDiagnosticResult.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-semibold">&check; AI Pipeline 100% Operational (${latency}ms)</span> &bull; Faster-Whisper & Summarizer ready.`;
+                    }
+                } else {
+                    if (aiDiagnosticResult) {
+                        aiDiagnosticResult.innerHTML = `<span class="text-amber-500 font-semibold">&bull; AI Status: ${data.overall_status}</span>`;
+                    }
+                }
+            } catch (err) {
+                if (aiDiagnosticResult) {
+                    aiDiagnosticResult.innerHTML = `<span class="text-rose-500 font-semibold">&cross; Diagnostic failed to reach server.</span>`;
+                }
+            } finally {
+                runAiDiagnosticBtn.disabled = false;
+            }
         });
     }
 
     if (clearMeetingHistoryBtn) {
         clearMeetingHistoryBtn.addEventListener("click", () => {
             if (confirm("Are you sure you want to clear your local meeting cache?")) {
-                localStorage.setItem("meetly_cached_meetings", JSON.stringify([]));
+                localStorage.setItem(_getMeetingsKey(), JSON.stringify([]));
                 renderDashboardMetrics();
-                renderMeetingsList("", "all");
+                if (typeof window.renderMeetingsList === "function") window.renderMeetingsList("", "all");
                 alert("Local meeting cache cleared successfully. Dashboard reset to empty state.");
             }
         });
@@ -1268,9 +1401,108 @@ document.addEventListener("DOMContentLoaded", () => {
             if (window._refreshMeetingActivityChart) {
                 setTimeout(window._refreshMeetingActivityChart, 50);
             }
+        } else if (targetViewId === "viewAnalytics") {
+            renderAnalyticsView();
         }
 
+        // Auto-close mobile drawer if open
+        closeMobileSidebar();
+
         window.scrollTo({ top: 0, behavior: "instant" });
+    }
+
+    // Mobile Sidebar Drawer Controller
+    const mobileSidebarToggleBtn = document.getElementById("mobileSidebarToggleBtn");
+    const closeMobileSidebarBtn = document.getElementById("closeMobileSidebarBtn");
+    const mainAppSidebar = document.getElementById("mainAppSidebar");
+    const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+
+    function openMobileSidebar() {
+        if (mainAppSidebar) mainAppSidebar.classList.remove("-translate-x-full");
+        if (sidebarBackdrop) sidebarBackdrop.classList.remove("hidden");
+    }
+
+    function closeMobileSidebar() {
+        if (mainAppSidebar) mainAppSidebar.classList.add("-translate-x-full");
+        if (sidebarBackdrop) sidebarBackdrop.classList.add("hidden");
+    }
+
+    if (mobileSidebarToggleBtn) mobileSidebarToggleBtn.addEventListener("click", openMobileSidebar);
+    if (closeMobileSidebarBtn) closeMobileSidebarBtn.addEventListener("click", closeMobileSidebar);
+    if (sidebarBackdrop) sidebarBackdrop.addEventListener("click", closeMobileSidebar);
+
+    // Dynamic Analytics View Renderer
+    async function renderAnalyticsView() {
+        const totalMeetingsEl = document.getElementById("analyticsTotalMeetings");
+        const timeSavedEl = document.getElementById("analyticsTimeSaved");
+        const completionRateEl = document.getElementById("analyticsCompletionRate");
+        const completionSubEl = document.getElementById("analyticsCompletionSub");
+        const tasksTotalBadge = document.getElementById("analyticsTasksTotalBadge");
+        const tasksOpenVal = document.getElementById("analyticsTasksOpenVal");
+        const tasksOpenBar = document.getElementById("analyticsTasksOpenBar");
+        const tasksCompletedVal = document.getElementById("analyticsTasksCompletedVal");
+        const tasksCompletedBar = document.getElementById("analyticsTasksCompletedBar");
+        const tasksPendingVal = document.getElementById("analyticsTasksPendingVal");
+        const tasksPendingBar = document.getElementById("analyticsTasksPendingBar");
+        const daysContainer = document.getElementById("analyticsDaysDistribution");
+
+        try {
+            const res = await fetch("/api/analytics");
+            if (!res.ok) throw new Error("Failed to load analytics");
+            const data = await res.json();
+            
+            const total = data.total_meetings || 0;
+            const actions = data.action_items || { open: 0, completed: 0, pending: 0 };
+            const sumActions = (actions.open || 0) + (actions.completed || 0) + (actions.pending || 0);
+            const compRate = sumActions > 0 ? ((actions.completed / sumActions) * 100).toFixed(1) : "0.0";
+            
+            // Estimated time saved: avg 45 mins (0.75 hr) per meeting
+            const timeSaved = (total * 0.75).toFixed(1);
+
+            if (totalMeetingsEl) totalMeetingsEl.textContent = total;
+            if (timeSavedEl) timeSavedEl.textContent = `${timeSaved} hrs`;
+            if (completionRateEl) completionRateEl.textContent = `${compRate}%`;
+            if (completionSubEl) completionSubEl.textContent = `${actions.completed || 0} of ${sumActions} deliverables completed`;
+            if (tasksTotalBadge) tasksTotalBadge.textContent = `${sumActions} Total`;
+
+            const openPct = sumActions > 0 ? ((actions.open / sumActions) * 100).toFixed(1) : 0;
+            const compPct = sumActions > 0 ? ((actions.completed / sumActions) * 100).toFixed(1) : 0;
+            const pendPct = sumActions > 0 ? ((actions.pending / sumActions) * 100).toFixed(1) : 0;
+
+            if (tasksOpenVal) tasksOpenVal.textContent = `${actions.open || 0} (${openPct}%)`;
+            if (tasksOpenBar) tasksOpenBar.style.width = `${openPct}%`;
+            if (tasksCompletedVal) tasksCompletedVal.textContent = `${actions.completed || 0} (${compPct}%)`;
+            if (tasksCompletedBar) tasksCompletedBar.style.width = `${compPct}%`;
+            if (tasksPendingVal) tasksPendingVal.textContent = `${actions.pending || 0} (${pendPct}%)`;
+            if (tasksPendingBar) tasksPendingBar.style.width = `${pendPct}%`;
+
+            if (daysContainer && Array.isArray(data.activity)) {
+                daysContainer.innerHTML = "";
+                const maxCount = Math.max(1, ...data.activity.map(a => a.meetings || 0));
+                data.activity.forEach(d => {
+                    const count = d.meetings || 0;
+                    const heightPct = Math.max(18, Math.round((count / maxCount) * 100));
+                    const col = document.createElement("div");
+                    col.className = "flex flex-col items-center gap-2";
+                    col.innerHTML = `
+                        <div class="w-full bg-slate-100 dark:bg-slate-800/80 rounded-xl h-28 flex items-end justify-center p-1.5 border border-slate-200/50 dark:border-slate-800">
+                            <div class="w-full bg-pink-600 rounded-lg transition-all duration-500 shadow-xs flex items-center justify-center text-[10px] text-white font-bold" style="height: ${heightPct}%;">
+                                ${count > 0 ? count : ''}
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-600 dark:text-slate-400">${d.day}</span>
+                    `;
+                    daysContainer.appendChild(col);
+                });
+            }
+        } catch (e) {
+            console.warn("Analytics fetch error:", e);
+        }
+    }
+
+    const refreshAnalyticsBtn = document.getElementById("refreshAnalyticsBtn");
+    if (refreshAnalyticsBtn) {
+        refreshAnalyticsBtn.addEventListener("click", renderAnalyticsView);
     }
 
     // Expose switchView globally for external triggers
@@ -1316,20 +1548,24 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Load sample meeting data for instant review
-    function loadDemoMeeting() {
-        fetch("/api/demo")
+    // Load sample meeting data for instant review across English, Hindi, and Hinglish
+    function loadDemoMeeting(lang = "english") {
+        window._isDemoModeActive = true;
+        window._activeDemoLang = lang;
+        switchView("viewWorkspace");
+        fetch(`/api/demo?lang=${encodeURIComponent(lang)}`)
             .then(res => res.json())
             .then(result => {
                 if (result.status === "success") {
                     const data = result.data;
+                    data.is_demo = true;
                     if (window.renderTwoPanelWorkspace) {
                         window.renderTwoPanelWorkspace(data);
                     }
                     const minutesOutputContainer = document.getElementById("minutesOutputContainer");
                     if (minutesOutputContainer) {
                         minutesOutputContainer.style.display = "block";
-                        window.scrollTo({ top: 0, behavior: "instant" });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
                     }
                 }
             })
@@ -1370,6 +1606,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         }
+        if (urlParams.get("demo") === "1") {
+            openDemoRecordingsModal();
+        }
     }
 
     // Run active view restoration
@@ -1383,7 +1622,8 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(res => res.ok ? res.json() : null)
         .then(data => {
             if (data && Array.isArray(data.meetings)) {
-                localStorage.setItem("meetly_cached_meetings", JSON.stringify(data.meetings));
+                const clean = data.meetings.filter(m => !MOCK_IDS.includes(m.id) && !MOCK_TITLES.includes(m.title));
+                localStorage.setItem(_getMeetingsKey(), JSON.stringify(clean));
                 renderDashboardMetrics();
                 if (typeof window.renderMeetingsList === "function") window.renderMeetingsList();
             }
@@ -1405,6 +1645,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.applyAccentColor = applyAccentColor;
     window.switchView = switchView;
     window.loadDemoMeeting = loadDemoMeeting;
+    window.openDemoRecordingsModal = openDemoRecordingsModal;
+    window.closeDemoRecordingsModal = closeDemoRecordingsModal;
     window.switchSettingsTab = switchSettingsTab;
     window.getMeetingActivityDemoData = getMeetingActivityDemoData;
     window.renderMeetingActivityChart = renderMeetingActivityChart;
@@ -1417,6 +1659,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.Meetly.applyAccentColor = applyAccentColor;
     window.Meetly.switchView = switchView;
     window.Meetly.loadDemoMeeting = loadDemoMeeting;
+    window.Meetly.openDemoRecordingsModal = openDemoRecordingsModal;
+    window.Meetly.closeDemoRecordingsModal = closeDemoRecordingsModal;
     window.Meetly.switchSettingsTab = switchSettingsTab;
     window.Meetly.getMeetingActivityDemoData = getMeetingActivityDemoData;
     window.Meetly.renderMeetingActivityChart = renderMeetingActivityChart;

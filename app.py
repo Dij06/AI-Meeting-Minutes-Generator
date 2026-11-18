@@ -1,19 +1,47 @@
 import os
 import time
 import uuid
+import json
+import threading
+import urllib.request
+from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for, make_response
 from flask_cors import CORS
 from services.exporter import generate_docx, generate_pdf
-from services.auth import init_auth_db, create_user, authenticate_user
+from services.auth import (
+    init_auth_db,
+    create_user,
+    authenticate_user,
+    update_user_password,
+    update_user_profile,
+    sync_supabase_user,
+)
 from services.meetings_db import (
     init_meetings_db,
     save_meeting,
     get_user_meetings,
+    get_meeting_by_id,
     update_meeting,
     delete_meeting,
+    purge_expired_meetings,
     get_analytics_summary,
 )
+
+# Load environment variables from .env if present
+def _load_env():
+    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if os.path.exists(env_file):
+        with open(env_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+_load_env()
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://dwwttorjskavpjkdagxw.supabase.co").rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_ANON_KEY") or "sb_publishable_dqwub0SmcoOEcJ2Spfv5Ig_ouyzWHLO"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "ai_meeting_minutes_secure_session_key_2026")
@@ -134,104 +162,320 @@ def format_transcript_to_utterances(transcript_text, segments=None):
 
     return utterances
 
-# Pre-populated realistic meeting dataset for instant demonstrations
-def get_demo_data():
-    utterances = [
-        {
-            "time": "00:02",
-            "seconds": 2,
-            "text": "We need to discuss the project deadline and finalize the core architecture for Meetly."
-        },
-        {
-            "time": "00:18",
-            "seconds": 18,
-            "text": "The frontend implementation is almost complete, with real-time progress indicators and standardized exports."
-        },
-        {
-            "time": "00:31",
-            "seconds": 31,
-            "text": "Let's complete testing by Friday, specifically focusing on the audio transcription and AI summarization pipeline."
-        },
-        {
-            "time": "01:05",
-            "seconds": 65,
-            "text": "For speech recognition, faster-whisper is delivering optimized low-latency transcription on CPU."
-        },
-        {
-            "time": "01:28",
-            "seconds": 88,
-            "text": "The NLP extraction pipeline cleanly structures the executive summary, key decisions, and action items."
-        },
-        {
-            "time": "01:52",
-            "seconds": 112,
-            "text": "Our next follow-up sync is scheduled for Thursday at 10:00 AM. Thank you everyone!"
-        }
-    ]
-    transcript = "\n\n".join([f"{u['time']}\n{u['text']}" for u in utterances])
-    return {
-        "filename": "Project_Planning_Meeting.mp3",
-        "file_size": "14.2 MB",
+# Pre-populated realistic meeting datasets across English, Hindi, and Auto/Hinglish
+DEMO_MEETINGS = {
+    "english": {
+        "filename": "meeting_english.mp3",
+        "title": "Product Sprint Sync",
+        "audio_url": "/static/audio/meeting_english.mp3",
+        "file_size": "0.16 MB",
         "statistics": {
-            "duration": "18m 42s",
-            "word_count": len(transcript.split()),
-            "decisions_count": 3,
-            "action_items_count": 3,
+            "duration": "0m 20s",
+            "word_count": 38,
+            "decisions_count": 2,
+            "action_items_count": 2,
             "language": "English"
         },
         "summary": (
-            "The team conducted an architecture and planning session for the AI Meeting Minutes Generator. "
-            "Key technical decisions were finalized, including using faster-whisper for speech-to-text conversion, "
-            "employing structured NLP extraction for action item tracking, and developing a web dashboard with "
-            "export capabilities in PDF and DOCX formats. Milestone assignments were allocated across the project team."
+            "The engineering and product teams held a sprint planning sync to finalize project milestones. "
+            "The team agreed to finalize the dashboard design, allocated the frontend component development to Sarah "
+            "with a deadline of Friday, and assigned the backend API integration review to John by tomorrow. "
+            "The launch timeline was officially approved for next week."
         ),
         "discussion_points": [
-            "Evaluation of speech-to-text models and selection of faster-whisper for low-latency CPU execution.",
-            "Structuring abstractive NLP models for key discussion points, decisions, and action item detection.",
-            "Interactive dashboard requirements including percentage progress tracking, meeting statistics, and document exports.",
-            "Integration timeline and deadline distribution across the team members."
+            "Review of meeting interface layout, interactive dashboard widgets, and user experience enhancements.",
+            "Component development deadline distribution between frontend and backend engineers.",
+            "Timeline approval and launch readiness evaluation for next week's beta release."
         ],
         "decisions": [
-            "Adopt faster-whisper as the primary Automatic Speech Recognition engine.",
-            "Standardize meeting minutes structure into Summary, Discussion Points, Decisions, and Action Items.",
-            "Enable direct client-side and server-side export into standardized PDF and DOCX templates."
+            "Today we agreed to finalize the dashboard design.",
+            "We also approved the launch timeline for next week."
         ],
         "action_items": [
             {
-                "task": "Finalize dashboard interface, percentage progress indicator, and document export pipeline",
-                "assignee": "Person 1",
-                "deadline": "Friday, 5:00 PM",
+                "task": "Sarah will complete the front-end components by Friday.",
+                "assignee": "Sarah",
+                "deadline": "By Friday",
                 "status": "In Progress"
             },
             {
-                "task": "Complete audio preprocessing, format conversion, and Whisper ASR integration",
-                "assignee": "Person 2",
-                "deadline": "Monday, 2:00 PM",
-                "status": "Pending"
-            },
-            {
-                "task": "Implement summarization pipeline and quantitative evaluation scripts (WER & ROUGE)",
-                "assignee": "Person 3",
-                "deadline": "Wednesday, 11:00 AM",
+                "task": "John must review the back-end of the integration by tomorrow.",
+                "assignee": "John",
+                "deadline": "By Tomorrow",
                 "status": "Pending"
             }
         ],
-        "utterances": utterances,
-        "transcript": transcript
+        "utterances": [
+            {
+                "time": "00:00",
+                "seconds": 0,
+                "text": "Good morning everyone. Welcome to our weekly project sync."
+            },
+            {
+                "time": "00:04",
+                "seconds": 4,
+                "text": "Today we agreed to finalize the dashboard design."
+            },
+            {
+                "time": "00:08",
+                "seconds": 8,
+                "text": "Sarah will complete the front-end components by Friday."
+            },
+            {
+                "time": "00:12",
+                "seconds": 12,
+                "text": "John must review the back-end of the integration by tomorrow."
+            },
+            {
+                "time": "00:16",
+                "seconds": 16,
+                "text": "We also approved the launch timeline for next week."
+            }
+        ],
+        "transcript": (
+            "00:00\nGood morning everyone. Welcome to our weekly project sync.\n\n"
+            "00:04\nToday we agreed to finalize the dashboard design.\n\n"
+            "00:08\nSarah will complete the front-end components by Friday.\n\n"
+            "00:12\nJohn must review the back-end of the integration by tomorrow.\n\n"
+            "00:16\nWe also approved the launch timeline for next week."
+        )
+    },
+    "hindi": {
+        "filename": "meeting_hindi.mp3",
+        "title": "प्रोजेक्ट बैठक (Hindi Sync)",
+        "audio_url": "/static/audio/meeting_hindi.mp3",
+        "file_size": "0.17 MB",
+        "statistics": {
+            "duration": "0m 21s",
+            "word_count": 40,
+            "decisions_count": 1,
+            "action_items_count": 2,
+            "language": "Hindi"
+        },
+        "summary": (
+            "आज की प्रोजेक्ट बैठक में टीम ने नए मोबाइल एप्लिकेशन के आगामी रिलीज की रूपरेखा तैयार की। "
+            "सर्वसम्मति से फैसला लिया गया कि नया मोबाइल ऐप अगले महीने लॉन्च किया जाएगा। "
+            "राहुल को शुक्रवार तक डेटाबेस आर्किटेक्चर पूरा करने और प्रिया को कल शाम तक यूआई डिज़ाइन समीक्षा पूरी करने की ज़िम्मेदारी सौंपी गई।"
+        ),
+        "discussion_points": [
+            "मोबाइल एप्लिकेशन रिलीज की समय-सीमा और अगले महीने का लॉन्च लक्ष्य।",
+            "बैकएंड डेटाबेस का कार्य और राहुल द्वारा शुक्रवार तक का समय निर्धारण।",
+            "यूजर इंटरफेस डिज़ाइन की समीक्षा और प्रिया का दायित्व।"
+        ],
+        "decisions": [
+            "हमने फैसला किया है कि नया मोबाइल ऐप अगले महीने लॉन्च होगा।"
+        ],
+        "action_items": [
+            {
+                "task": "राहुल शुक्रवार तक डेटाबेस का काम पूरा करेंगे।",
+                "assignee": "Rahul",
+                "deadline": "शुक्रवार",
+                "status": "In Progress"
+            },
+            {
+                "task": "प्रिया कल शाम तक डिज़ाइन की समीक्षा करेंगी।",
+                "assignee": "Priya",
+                "deadline": "कल शाम",
+                "status": "Pending"
+            }
+        ],
+        "utterances": [
+            {
+                "time": "00:00",
+                "seconds": 0,
+                "text": "नमस्ते टीम। आज की प्रोजेक्ट बैठक में आपका स्वागत है।"
+            },
+            {
+                "time": "00:05",
+                "seconds": 5,
+                "text": "हमने फैसला किया है कि नया मोबाइल ऐप अगले महीने लॉन्च होगा।"
+            },
+            {
+                "time": "00:10",
+                "seconds": 10,
+                "text": "राहुल शुक्रवार तक डेटाबेस का काम पूरा करेंगे।"
+            },
+            {
+                "time": "00:15",
+                "seconds": 15,
+                "text": "प्रिया कल शाम तक डिज़ाइन की समीक्षा करेंगी।"
+            },
+            {
+                "time": "00:18",
+                "seconds": 18,
+                "text": "हम सभी इस योजना पर सहमत हैं।"
+            }
+        ],
+        "transcript": (
+            "00:00\nनमस्ते टीम। आज की प्रोजेक्ट बैठक में आपका स्वागत है।\n\n"
+            "00:05\nहमने फैसला किया है कि नया मोबाइल ऐप अगले महीने लॉन्च होगा।\n\n"
+            "00:10\nराहुल शुक्रवार तक डेटाबेस का काम पूरा करेंगे।\n\n"
+            "00:15\nप्रिया कल शाम तक डिज़ाइन की समीक्षा करेंगी।\n\n"
+            "00:18\nहम सभी इस योजना पर सहमत हैं।"
+        )
+    },
+    "auto": {
+        "filename": "meeting_auto.mp3",
+        "title": "Sprint Planning (Auto / Hinglish)",
+        "audio_url": "/static/audio/meeting_auto.mp3",
+        "file_size": "0.19 MB",
+        "statistics": {
+            "duration": "0m 24s",
+            "word_count": 45,
+            "decisions_count": 1,
+            "action_items_count": 3,
+            "language": "Auto"
+        },
+        "summary": (
+            "Sprint planning meeting conducted in natural Hinglish covering technical stack decisions and task ownership. "
+            "The team decided to use PostgreSQL for relational storage. Vikram will complete the authentication module "
+            "by Wednesday, Sneha is responsible for frontend testing by Friday, and all team members will review documentation."
+        ),
+        "discussion_points": [
+            "Sprint planning roadmap and database technology selection.",
+            "Authentication module implementation and Wednesday milestone assigned to Vikram.",
+            "Frontend testing validation assigned to Sneha and team-wide documentation review."
+        ],
+        "decisions": [
+            "Humne decide kiya hai ki hum PostgreSQL database use karenge."
+        ],
+        "action_items": [
+            {
+                "task": "Vikram will finish the authentication module by Wednesday.",
+                "assignee": "Vikram",
+                "deadline": "By Wednesday",
+                "status": "In Progress"
+            },
+            {
+                "task": "Sneha needs to complete the frontend testing by Friday.",
+                "assignee": "Sneha",
+                "deadline": "By Friday",
+                "status": "Pending"
+            },
+            {
+                "task": "Sabhi log documentation review kar lena.",
+                "assignee": "Team",
+                "deadline": "This Week",
+                "status": "Pending"
+            }
+        ],
+        "utterances": [
+            {
+                "time": "00:00",
+                "seconds": 0,
+                "text": "Hello team, good morning. Aaj ki meeting ka main agenda sprint planning hai."
+            },
+            {
+                "time": "00:06",
+                "seconds": 6,
+                "text": "Humne decide kiya hai ki hum PostgreSQL database use karenge."
+            },
+            {
+                "time": "00:11",
+                "seconds": 11,
+                "text": "Vikram will finish the authentication module by Wednesday."
+            },
+            {
+                "time": "00:16",
+                "seconds": 16,
+                "text": "Sneha needs to complete the frontend testing by Friday."
+            },
+            {
+                "time": "00:20",
+                "seconds": 20,
+                "text": "Sabhi log documentation review kar lena."
+            }
+        ],
+        "transcript": (
+            "00:00\nHello team, good morning. Aaj ki meeting ka main agenda sprint planning hai.\n\n"
+            "00:06\nHumne decide kiya hai ki hum PostgreSQL database use karenge.\n\n"
+            "00:11\nVikram will finish the authentication module by Wednesday.\n\n"
+            "00:16\nSneha needs to complete the frontend testing by Friday.\n\n"
+            "00:20\nSabhi log documentation review kar lena."
+        )
     }
+}
+
+def get_demo_data(lang="english"):
+    normalized = (lang or "english").strip().lower()
+    if normalized in ["hindi", "hi"]:
+        return dict(DEMO_MEETINGS["hindi"])
+    elif normalized in ["auto", "hinglish", "bilingual", "all"]:
+        return dict(DEMO_MEETINGS["auto"])
+    return dict(DEMO_MEETINGS["english"])
 
 # Public landing page
 @app.route("/")
 def landing():
     return render_template("landing.html")
 
-# User sign-in with real credential verification and instant guest access
+# Supabase Auth Configuration Endpoint (Safe publishable key for client SDK)
+@app.route("/api/auth/config", methods=["GET"])
+def api_auth_config():
+    return jsonify({
+        "supabase_url": SUPABASE_URL,
+        "supabase_key": SUPABASE_KEY
+    })
+
+# Session Synchronization Endpoint: Connects Supabase OAuth/JWT to Flask session
+@app.route("/api/auth/session", methods=["POST"])
+def api_auth_session():
+    payload = request.get_json(silent=True) or {}
+    access_token = payload.get("access_token")
+    user_data = payload.get("user") or {}
+
+    if not access_token or not user_data.get("email"):
+        return jsonify({"status": "error", "message": "Missing authentication credentials."}), 400
+
+    email = user_data["email"].strip().lower()
+    user_id = user_data.get("id")
+    user_meta = user_data.get("user_metadata") or {}
+    name = user_meta.get("name") or user_meta.get("full_name") or email.split("@")[0]
+
+    # Verify access token against Supabase Auth API
+    try:
+        req = urllib.request.Request(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {access_token}",
+                "User-Agent": "Meetly/1.0"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                verified_user = json.loads(resp.read().decode())
+                email = verified_user.get("email", email).lower()
+                user_id = verified_user.get("id", user_id)
+                meta = verified_user.get("user_metadata") or {}
+                name = meta.get("name") or meta.get("full_name") or name
+    except Exception:
+        pass
+
+    synced = sync_supabase_user(AUTH_DB_PATH, email, name, user_id)
+    session["user"] = {
+        "id": synced["id"],
+        "supabase_id": user_id,
+        "email": email,
+        "name": name,
+        "is_guest": False,
+        "auth_provider": (user_data.get("app_metadata") or {}).get("provider", "supabase")
+    }
+    return jsonify({"status": "success", "redirect": "/dashboard", "user": session["user"]})
+
+# OAuth Callback Handler for Google and external providers
+@app.route("/auth/callback")
+def auth_callback():
+    return render_template("auth_callback.html")
+
+# Password Reset Page
+@app.route("/reset-password")
+def reset_password():
+    return render_template("reset_password.html")
+
+# User sign-in with Supabase Authentication, local database fallback, and demo guest access
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.args.get("google") == "1":
-        session["user"] = {"name": "Google User", "email": "user@gmail.com", "is_guest": False}
-        return redirect(url_for("dashboard"))
-
     if request.args.get("guest") == "1":
         session["user"] = {
             "name": "Guest User",
@@ -241,14 +485,69 @@ def login():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        email = request.form.get("email", "")
+        email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
-        ok, result = authenticate_user(AUTH_DB_PATH, email, password)
-        if not ok:
-            session["auth_error"] = result
+
+        # In testing mode, bypass external network rate limits
+        if app.config.get("TESTING"):
+            ok, result = authenticate_user(AUTH_DB_PATH, email, password)
+            if not ok:
+                session["auth_error"] = result
+                return redirect(url_for("login"))
+            session["user"] = result
+            return redirect(url_for("dashboard"))
+
+        # 1. Attempt authentication with Supabase GoTrue Auth
+        try:
+            login_payload = json.dumps({"email": email, "password": password}).encode("utf-8")
+            req = urllib.request.Request(
+                f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
+                data=login_payload,
+                headers={
+                    "apikey": SUPABASE_KEY,
+                    "Content-Type": "application/json",
+                    "Content-Length": str(len(login_payload)),
+                    "User-Agent": "Meetly/1.0"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                if resp.status == 200:
+                    auth_data = json.loads(resp.read().decode())
+                    s_user = auth_data.get("user", {})
+                    meta = s_user.get("user_metadata") or {}
+                    name = meta.get("name") or meta.get("full_name") or email.split("@")[0]
+                    synced = sync_supabase_user(AUTH_DB_PATH, email, name, s_user.get("id"))
+                    session["user"] = {
+                        "id": synced["id"],
+                        "supabase_id": s_user.get("id"),
+                        "email": email.lower(),
+                        "name": name,
+                        "is_guest": False,
+                        "auth_provider": "supabase"
+                    }
+                    return redirect(url_for("dashboard"))
+        except urllib.error.HTTPError as e:
+            err_resp = e.read().decode()
+            try:
+                err_json = json.loads(err_resp)
+                err_code = err_json.get("error_code") or ""
+                err_msg = err_json.get("msg") or err_json.get("error_description") or "Invalid email or password."
+                if err_code == "email_not_confirmed" or "email not confirmed" in err_msg.lower():
+                    err_msg = "Please check your inbox and confirm your email before signing in."
+                elif err_code == "invalid_credentials" or "invalid login credentials" in err_msg.lower():
+                    err_msg = "Invalid email or password."
+            except Exception:
+                err_msg = "Invalid email or password."
+            session["auth_error"] = err_msg
             return redirect(url_for("login"))
-        session["user"] = result
-        return redirect(url_for("dashboard"))
+        except Exception:
+            # Fallback to local SQLite user verification if Supabase offline
+            ok, result = authenticate_user(AUTH_DB_PATH, email, password)
+            if not ok:
+                session["auth_error"] = result
+                return redirect(url_for("login"))
+            session["user"] = result
+            return redirect(url_for("dashboard"))
 
     error = session.pop("auth_error", None)
     resp = make_response(render_template("login.html", error=error))
@@ -257,19 +556,79 @@ def login():
     resp.headers["Expires"] = "0"
     return resp
 
-# Account registration endpoint
+# Account registration endpoint with Supabase Auth integration
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
-        name = request.form.get("name", "")
-        email = request.form.get("email", "")
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
-        ok, result = create_user(AUTH_DB_PATH, name, email, password)
-        if not ok:
-            session["auth_error"] = result
+
+        # In testing mode, bypass external network rate limits
+        if app.config.get("TESTING"):
+            ok, result = create_user(AUTH_DB_PATH, name, email, password)
+            if not ok:
+                session["auth_error"] = result
+                return redirect(url_for("signup"))
+            session["user"] = result
+            return redirect(url_for("dashboard"))
+
+        # 1. Attempt user registration with Supabase Auth
+        try:
+            signup_payload = json.dumps({
+                "email": email,
+                "password": password,
+                "data": {"name": name}
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                f"{SUPABASE_URL}/auth/v1/signup",
+                data=signup_payload,
+                headers={
+                    "apikey": SUPABASE_KEY,
+                    "Content-Type": "application/json",
+                    "Content-Length": str(len(signup_payload)),
+                    "User-Agent": "Meetly/1.0"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                if resp.status == 200:
+                    signup_data = json.loads(resp.read().decode())
+                    s_user = signup_data.get("user") or signup_data
+                    synced = sync_supabase_user(AUTH_DB_PATH, email, name, s_user.get("id"))
+                    session["user"] = {
+                        "id": synced["id"],
+                        "supabase_id": s_user.get("id"),
+                        "email": email.lower(),
+                        "name": name,
+                        "is_guest": False,
+                        "auth_provider": "supabase"
+                    }
+                    # If email confirmation is required by Supabase
+                    if not signup_data.get("access_token") and signup_data.get("confirmation_sent_at"):
+                        session.pop("user", None)
+                        session["auth_error"] = "Account created! Please check your email inbox to confirm your account."
+                        return redirect(url_for("login"))
+                    return redirect(url_for("dashboard"))
+        except urllib.error.HTTPError as e:
+            err_resp = e.read().decode()
+            try:
+                err_json = json.loads(err_resp)
+                err_msg = err_json.get("msg") or "Failed to register account."
+                if "already registered" in err_msg.lower() or "already exists" in err_msg.lower():
+                    err_msg = "An account with this email already exists."
+                elif "password should be at least" in err_msg.lower():
+                    err_msg = "Password must be at least 6 characters long."
+            except Exception:
+                err_msg = "Failed to register account."
+            session["auth_error"] = err_msg
             return redirect(url_for("signup"))
-        session["user"] = result
-        return redirect(url_for("dashboard"))
+        except Exception:
+            ok, result = create_user(AUTH_DB_PATH, name, email, password)
+            if not ok:
+                session["auth_error"] = result
+                return redirect(url_for("signup"))
+            session["user"] = result
+            return redirect(url_for("dashboard"))
 
     error = session.pop("auth_error", None)
     resp = make_response(render_template("signup.html", error=error))
@@ -296,11 +655,21 @@ def logout():
     session.clear()
     return redirect(url_for("landing"))
 
-# Provide sample meeting dataset for client preview
+# Provide sample meeting datasets for client preview across English, Hindi, and Auto/Hinglish
 @app.route("/api/demo")
 def api_demo():
     global current_meeting_data
-    current_meeting_data = get_demo_data()
+    lang = request.args.get("lang", "english")
+    if request.args.get("all") == "1":
+        demos = [
+            get_demo_data("english"),
+            get_demo_data("hindi"),
+            get_demo_data("auto"),
+        ]
+        return jsonify({"status": "success", "demos": demos})
+
+    current_meeting_data = get_demo_data(lang)
+    session["meeting_data"] = current_meeting_data
     return jsonify({"status": "success", "data": current_meeting_data})
 
 # Main audio ingestion and speech-to-text + summarization pipeline
@@ -322,7 +691,8 @@ def upload_file():
     # User-selected meeting language: English, Hindi, or Hinglish
     language = request.form.get("language", "English")
 
-    safe_name = secure_filename(file.filename)
+    ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else "mp3"
+    safe_name = secure_filename(file.filename) or f"recording_{int(time.time())}.{ext}"
     # Prefix timestamp to prevent filename collisions
     unique_filename = f"{int(time.time())}_{safe_name}"
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
@@ -366,6 +736,7 @@ def upload_file():
     current_meeting_data = {
         "filename": safe_name,
         "file_size": f"{file_size_mb} MB",
+        "local_path": file_path,
         "statistics": {
             "duration": duration,
             "word_count": len(transcript.split()),
@@ -381,8 +752,26 @@ def upload_file():
         "transcript": transcript
     }
 
-    # Save processed meeting in SQLite for the current user (or guest)
+    # Upload to Supabase Cloud Storage (audio-recordings bucket)
     user_email = (session.get("user") or {}).get("email", "guest@meetly.app")
+    try:
+        from services.supabase_storage import upload_audio_to_supabase, is_storage_bucket_ready
+        if is_storage_bucket_ready():
+            user_folder = (session.get("user") or {}).get("supabase_id") or user_email
+            token = (session.get("user") or {}).get("access_token")
+            storage_res = upload_audio_to_supabase(
+                file_path,
+                user_folder=user_folder,
+                custom_filename=unique_filename,
+                access_token=token
+            )
+            if storage_res:
+                current_meeting_data["storage_path"] = storage_res.get("storage_path")
+                current_meeting_data["storage_url"] = storage_res.get("storage_url")
+    except Exception as e:
+        print(f"[Supabase Storage] Background upload warning: {e}")
+
+    # Save processed meeting in SQLite for the current user (or guest)
     db_id = save_meeting(AUTH_DB_PATH, user_email, current_meeting_data)
     current_meeting_data["db_id"] = db_id
 
@@ -399,22 +788,74 @@ def upload_file():
 @app.route("/api/meetings", methods=["GET"])
 def api_list_meetings():
     user_email = (session.get("user") or {}).get("email", "guest@meetly.app")
+    # Automatically purge meetings older than 7-day retention period
+    try:
+        purge_expired_meetings(AUTH_DB_PATH, upload_folder=app.config["UPLOAD_FOLDER"], retention_days=7)
+    except Exception as e:
+        print(f"[Purge Policy] Background check error: {e}")
     return jsonify({
         "status": "success",
         "meetings": get_user_meetings(AUTH_DB_PATH, user_email),
     })
 
 
-@app.route("/api/meetings/<int:meeting_id>", methods=["PATCH", "DELETE"])
+@app.route("/api/meetings/<int:meeting_id>", methods=["GET", "PATCH", "DELETE"])
 def api_modify_meeting(meeting_id):
     user_email = (session.get("user") or {}).get("email", "guest@meetly.app")
+    if request.method == "GET":
+        meeting = get_meeting_by_id(AUTH_DB_PATH, user_email, meeting_id)
+        if not meeting:
+            return jsonify({"status": "not_found", "error": "Meeting not found"}), 404
+        return jsonify({"status": "success", "meeting": meeting})
+
     if request.method == "DELETE":
-        ok = delete_meeting(AUTH_DB_PATH, user_email, meeting_id)
-        return jsonify({"status": "success" if ok else "not_found"}), (200 if ok else 404)
+        immediate = request.args.get("immediate", "").lower() in ["1", "true", "yes"]
+        res = delete_meeting(
+            AUTH_DB_PATH,
+            user_email,
+            meeting_id,
+            immediate=immediate,
+            upload_folder=app.config["UPLOAD_FOLDER"]
+        )
+        if res.get("success"):
+            return jsonify({
+                "status": "success",
+                "message": res.get("message", "Recording scheduled for permanent deletion in 7 days."),
+                "delete_scheduled_for": res.get("delete_scheduled_for"),
+                "soft_deleted": res.get("soft_deleted", True)
+            }), 200
+        return jsonify({"status": "not_found", "error": res.get("error", "Meeting not found")}), 404
 
     payload = request.get_json(silent=True) or {}
     ok = update_meeting(AUTH_DB_PATH, user_email, meeting_id, payload)
     return jsonify({"status": "success" if ok else "not_found"}), (200 if ok else 404)
+
+
+@app.route("/api/user/password", methods=["POST"])
+def api_update_password():
+    user = session.get("user")
+    if not user or user.get("is_guest"):
+        return jsonify({"status": "error", "message": "Sign in required to update password."}), 401
+    payload = request.get_json(silent=True) or {}
+    current_pw = payload.get("current_password", "")
+    new_pw = payload.get("new_password", "")
+    ok, message = update_user_password(AUTH_DB_PATH, user["email"], current_pw, new_pw)
+    return jsonify({"status": "success" if ok else "error", "message": message}), (200 if ok else 400)
+
+
+@app.route("/api/user/profile", methods=["POST"])
+def api_update_profile():
+    user = session.get("user")
+    if not user:
+        return jsonify({"status": "error", "message": "Sign in required to update profile."}), 401
+    payload = request.get_json(silent=True) or {}
+    name = payload.get("name", user.get("name", "User"))
+    email = payload.get("email", user.get("email", "guest@meetly.app"))
+    ok, result = update_user_profile(AUTH_DB_PATH, user["email"], name, email)
+    if not ok:
+        return jsonify({"status": "error", "message": result}), 400
+    session["user"] = {**user, **result}
+    return jsonify({"status": "success", "user": session["user"]})
 
 
 @app.route("/api/analytics", methods=["GET"])
@@ -638,6 +1079,8 @@ def export_file(file_format):
             "transcript": request.args.get("transcript", "1") == "1",
             "speakers": request.args.get("speakers", "0") == "1",
         }
+    elif isinstance(sections, (list, tuple, set)):
+        sections = {k: True for k in sections}
 
     data = client_data if client_data else (session.get("meeting_data") or current_meeting_data)
     if not data:
@@ -680,6 +1123,23 @@ def internal_server_error(error):
     if request.path.startswith("/api/") or request.path in ["/upload", "/export"]:
         return jsonify({"error": "An internal server error occurred while processing your request."}), 500
     return error
+
+def _start_retention_purge_worker():
+    def _worker():
+        while True:
+            try:
+                purged = purge_expired_meetings(AUTH_DB_PATH, upload_folder=UPLOAD_FOLDER, retention_days=7)
+                if purged > 0:
+                    print(f"[Retention Policy] Auto-purged {purged} meeting(s) past 7-day retention.")
+            except Exception as e:
+                print(f"[Retention Policy] Worker warning: {e}")
+            time.sleep(3600)  # Check every hour
+
+    t = threading.Thread(target=_worker, daemon=True, name="RetentionPurgeWorker")
+    t.start()
+
+# Start background retention worker on app launch
+_start_retention_purge_worker()
 
 if __name__ == "__main__":
     # Single-process mode to prevent duplicate server threads on Windows

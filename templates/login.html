@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In - Meetly</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/static/js/supabase_auth.js?v=5.0"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -54,24 +56,36 @@
         </div>
 
         <div class="bg-white dark:bg-[#0d121f] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-[0_15px_35px_rgba(37,99,235,0.08)] dark:shadow-2xl">
-            <form action="/login" method="POST" class="space-y-4">
+            <div id="clientAlert" class="hidden mb-5 p-3.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2.5">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="clientAlertText"></span>
+            </div>
+
+            {% if error %}
+            <div id="serverAlert" class="mb-5 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/70 text-rose-700 dark:text-rose-300 text-xs sm:text-sm font-semibold flex items-center gap-2.5">
+                <svg class="w-4 h-4 shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form id="loginForm" action="/login" method="POST" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Email Address</label>
-                    <input type="email" name="email" placeholder="name@domain.com" required
+                    <input type="email" id="loginEmail" name="email" placeholder="name@domain.com" required
                         class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-600/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition">
                 </div>
 
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Password</label>
-                        <a href="#" class="text-xs text-pink-600 dark:text-pink-400 hover:underline font-semibold transition">Forgot?</a>
+                        <button type="button" id="forgotPasswordBtn" class="text-xs text-pink-600 dark:text-pink-400 hover:underline font-semibold transition cursor-pointer">Forgot Password?</button>
                     </div>
-                    <input type="password" name="password" placeholder="••••••••" required
+                    <input type="password" id="loginPassword" name="password" placeholder="••••••••" required
                         class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-600/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none transition">
                 </div>
 
-                <button type="submit" class="w-full mt-2 bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 rounded-xl text-sm transition shadow-md shadow-pink-500/25">
-                    Sign In to Meetly
+                <button type="submit" id="loginSubmitBtn" class="w-full mt-2 bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 rounded-xl text-sm transition shadow-md shadow-pink-500/25 flex items-center justify-center gap-2">
+                    <span id="loginBtnText">Sign In to Meetly</span>
                 </button>
             </form>
 
@@ -80,24 +94,44 @@
                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-white dark:bg-[#0d121f] px-3 text-slate-400 font-medium">Or continue with</span></div>
             </div>
 
-            <a href="/login?google=1" class="w-full mb-3 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition font-medium py-2.5 rounded-xl text-sm flex items-center justify-center gap-2.5 shadow-sm">
+            <button type="button" id="googleLoginBtn" class="w-full mb-3 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition font-medium py-2.5 rounded-xl text-sm flex items-center justify-center gap-2.5 shadow-sm cursor-pointer">
                 <svg class="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                 </svg>
-                Continue with Google
-            </a>
+                <span>Continue with Google</span>
+            </button>
 
             <a href="/login?guest=1" class="w-full bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-900/40 text-pink-700 dark:text-pink-300 border border-pink-200/80 dark:border-pink-800 transition font-medium py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
                 <svg class="w-4 h-4 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Instant Guest &bull; Demo Access
+                <span>Instant Guest &bull; Demo Access</span>
             </a>
 
             <p class="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
                 Don't have an account? <a href="/signup" class="text-pink-600 dark:text-pink-400 hover:underline font-bold">Sign up</a>
             </p>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white dark:bg-[#0d121f] rounded-2xl border border-slate-200 dark:border-slate-800 max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 dark:text-white">Recover Password</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">We'll send a secure password reset link to your email.</p>
+            </div>
+            <div id="forgotAlert" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Email Address</label>
+                <input type="email" id="forgotEmail" placeholder="name@domain.com"
+                    class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-pink-600 focus:ring-2 focus:ring-pink-600/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none">
+            </div>
+            <div class="flex items-center justify-end gap-2.5 pt-2">
+                <button type="button" id="cancelForgotBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+                <button type="button" id="sendForgotBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-pink-600 hover:bg-pink-700 shadow-sm transition">Send Link</button>
+            </div>
         </div>
     </div>
 
@@ -114,12 +148,122 @@
                 }
             });
         }
-        window.addEventListener('pageshow', (event) => {
-            const nav = performance.getEntriesByType('navigation')[0];
-            if (event.persisted || (nav && nav.type === 'reload')) {
-                document.querySelectorAll('form input').forEach(inp => { inp.value = ''; });
+
+        const clientAlert = document.getElementById('clientAlert');
+        const clientAlertText = document.getElementById('clientAlertText');
+        const serverAlert = document.getElementById('serverAlert');
+        const loginForm = document.getElementById('loginForm');
+        const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+        const loginBtnText = document.getElementById('loginBtnText');
+        const googleLoginBtn = document.getElementById('googleLoginBtn');
+
+        function showMessage(msg, isSuccess = false) {
+            if (serverAlert) serverAlert.classList.add('hidden');
+            clientAlert.className = `mb-5 p-3.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 ${
+                isSuccess
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 text-emerald-700 dark:text-emerald-300'
+                : 'bg-rose-50 dark:bg-rose-950/60 border border-rose-200 text-rose-700 dark:text-rose-300'
+            }`;
+            clientAlertText.textContent = msg;
+            clientAlert.classList.remove('hidden');
+        }
+
+        // Email / Password Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            loginSubmitBtn.disabled = true;
+            loginBtnText.textContent = 'Signing in...';
+
+            try {
+                if (window.MeetlyAuth) {
+                    const data = await window.MeetlyAuth.signInWithEmail(email, password);
+                    if (data && data.session) {
+                        window.location.href = '/dashboard';
+                        return;
+                    }
+                }
+                // Fallback to standard form post
+                loginForm.submit();
+            } catch (err) {
+                let msg = err.message || 'Invalid email or password.';
+                if (msg.toLowerCase().includes('email not confirmed')) {
+                    msg = 'Please check your inbox and confirm your email before signing in.';
+                } else if (msg.toLowerCase().includes('invalid login credentials')) {
+                    msg = 'Invalid email or password.';
+                }
+                showMessage(msg, false);
+                loginSubmitBtn.disabled = false;
+                loginBtnText.textContent = 'Sign In to Meetly';
             }
         });
+
+        // Google OAuth Sign In
+        if (googleLoginBtn) {
+            googleLoginBtn.addEventListener('click', async () => {
+                try {
+                    googleLoginBtn.disabled = true;
+                    googleLoginBtn.querySelector('span').textContent = 'Connecting to Google...';
+                    if (window.MeetlyAuth) {
+                        await window.MeetlyAuth.signInWithGoogle();
+                    } else {
+                        window.location.href = '/login?google=1';
+                    }
+                } catch (err) {
+                    showMessage(err.message || 'Failed to start Google sign in.', false);
+                    googleLoginBtn.disabled = false;
+                    googleLoginBtn.querySelector('span').textContent = 'Continue with Google';
+                }
+            });
+        }
+
+        // Forgot Password Modal
+        const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+        const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+        const cancelForgotBtn = document.getElementById('cancelForgotBtn');
+        const sendForgotBtn = document.getElementById('sendForgotBtn');
+        const forgotEmail = document.getElementById('forgotEmail');
+        const forgotAlert = document.getElementById('forgotAlert');
+
+        if (forgotPasswordBtn && forgotPasswordModal) {
+            forgotPasswordBtn.addEventListener('click', () => {
+                forgotEmail.value = document.getElementById('loginEmail').value;
+                forgotAlert.classList.add('hidden');
+                forgotPasswordModal.classList.remove('hidden');
+            });
+            cancelForgotBtn.addEventListener('click', () => {
+                forgotPasswordModal.classList.add('hidden');
+            });
+            sendForgotBtn.addEventListener('click', async () => {
+                const email = forgotEmail.value.trim();
+                if (!email) {
+                    forgotAlert.className = 'p-3 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200';
+                    forgotAlert.textContent = 'Please enter your email address.';
+                    forgotAlert.classList.remove('hidden');
+                    return;
+                }
+                sendForgotBtn.disabled = true;
+                sendForgotBtn.textContent = 'Sending...';
+                try {
+                    if (window.MeetlyAuth) {
+                        await window.MeetlyAuth.resetPassword(email);
+                    }
+                    forgotAlert.className = 'p-3 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+                    forgotAlert.textContent = 'Password reset link sent! Check your email inbox.';
+                    forgotAlert.classList.remove('hidden');
+                    setTimeout(() => { forgotPasswordModal.classList.add('hidden'); }, 3000);
+                } catch (err) {
+                    forgotAlert.className = 'p-3 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200';
+                    forgotAlert.textContent = err.message || 'Failed to send reset link.';
+                    forgotAlert.classList.remove('hidden');
+                } finally {
+                    sendForgotBtn.disabled = false;
+                    sendForgotBtn.textContent = 'Send Link';
+                }
+            });
+        }
     </script>
 </body>
 </html>

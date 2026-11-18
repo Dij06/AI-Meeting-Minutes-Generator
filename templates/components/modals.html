@@ -209,3 +209,124 @@
             </div>
         </div>
     </div>
+
+    <!-- Explore Demo Recordings Modal Dialog -->
+    <div id="demoRecordingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150">
+        <div class="bg-white dark:bg-[#0d121f] border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-7 max-w-2xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400 flex items-center justify-center shadow-xs">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Explore Demo Recordings</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Select a pre-recorded meeting with real playable voice, synchronized transcript, and action items</p>
+                    </div>
+                </div>
+                <button type="button" id="closeDemoModalBtn" aria-label="Close modal" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Demo Options List -->
+            <div class="grid grid-cols-1 gap-3.5">
+                <!-- Option 1: English Demo -->
+                <div class="group relative p-4 sm:p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:border-pink-500 dark:hover:border-pink-500/60 hover:bg-pink-50/20 dark:hover:bg-pink-950/10 transition-all shadow-xs hover:shadow-md cursor-pointer select-none select-demo-option" data-demo-lang="english">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-1.5 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🇬🇧</span>
+                                <h4 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">Product Sprint Sync (English)</h4>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">English</span>
+                            </div>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Architecture and roadmap sync: finalizes the dashboard UI, assigns frontend components to Sarah (Friday), and backend review to John (tomorrow).
+                            </p>
+                            <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                <span class="inline-flex items-center gap-1"><svg class="w-3.5 h-3.5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 0m 20s</span>
+                                <span>&bull;</span>
+                                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">2 Decisions</span>
+                                <span>&bull;</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-semibold">2 Action Items</span>
+                                <span>&bull;</span>
+                                <span class="text-slate-400 font-mono text-[10px]">meeting_english.mp3</span>
+                            </div>
+                        </div>
+                        <button type="button" class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs shadow-xs transition group-hover:scale-105 pointer-events-none">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <span>Open Demo</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Option 2: Hindi Demo -->
+                <div class="group relative p-4 sm:p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:border-pink-500 dark:hover:border-pink-500/60 hover:bg-pink-50/20 dark:hover:bg-pink-950/10 transition-all shadow-xs hover:shadow-md cursor-pointer select-none select-demo-option" data-demo-lang="hindi">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-1.5 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🇮🇳</span>
+                                <h4 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">प्रोजेक्ट बैठक (Hindi Sync)</h4>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Hindi (हिन्दी)</span>
+                            </div>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                हिंदी में बैठक: मोबाइल ऐप रिलीज योजना, राहुल द्वारा डेटाबेस कार्य (शुक्रवार), और प्रिया द्वारा डिज़ाइन समीक्षा (कल शाम)।
+                            </p>
+                            <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                <span class="inline-flex items-center gap-1"><svg class="w-3.5 h-3.5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 0m 21s</span>
+                                <span>&bull;</span>
+                                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">1 Decision</span>
+                                <span>&bull;</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-semibold">2 Action Items</span>
+                                <span>&bull;</span>
+                                <span class="text-slate-400 font-mono text-[10px]">meeting_hindi.mp3</span>
+                            </div>
+                        </div>
+                        <button type="button" class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs shadow-xs transition group-hover:scale-105 pointer-events-none">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <span>Open Demo</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Option 3: Auto / Hinglish Demo -->
+                <div class="group relative p-4 sm:p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:border-pink-500 dark:hover:border-pink-500/60 hover:bg-pink-50/20 dark:hover:bg-pink-950/10 transition-all shadow-xs hover:shadow-md cursor-pointer select-none select-demo-option" data-demo-lang="auto">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-1.5 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🌐</span>
+                                <h4 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">Sprint Planning (Auto / Hinglish)</h4>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">Auto-Detect</span>
+                            </div>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Bilingual meeting: deciding PostgreSQL database, Vikram's auth module (Wednesday), Sneha's frontend testing (Friday), and team docs review.
+                            </p>
+                            <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                <span class="inline-flex items-center gap-1"><svg class="w-3.5 h-3.5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 0m 24s</span>
+                                <span>&bull;</span>
+                                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">1 Decision</span>
+                                <span>&bull;</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-semibold">3 Action Items</span>
+                                <span>&bull;</span>
+                                <span class="text-slate-400 font-mono text-[10px]">meeting_auto.mp3</span>
+                            </div>
+                        </div>
+                        <button type="button" class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs shadow-xs transition group-hover:scale-105 pointer-events-none">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <span>Open Demo</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <span class="text-[11px] text-slate-400">💡 Includes real audio streaming and interactive speech playback</span>
+                <button type="button" id="dismissDemoModalBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">Close</button>
+            </div>
+        </div>
+    </div>

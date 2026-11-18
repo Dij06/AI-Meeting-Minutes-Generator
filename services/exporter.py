@@ -38,7 +38,9 @@ def extract_speaker_stats(data: dict) -> list:
 
 def generate_docx(data: dict, output_filepath: str, sections: dict = None) -> str:
     """Generates a professional DOCX file from structured meeting data with selective sections."""
-    if sections is None:
+    if isinstance(sections, (list, tuple, set)):
+        sections = {k: True for k in sections}
+    elif not sections or not isinstance(sections, dict):
         sections = {
             "summary": True,
             "decisions": True,
@@ -136,7 +138,7 @@ def generate_docx(data: dict, output_filepath: str, sections: dict = None) -> st
                 r.font.color.rgb = RGBColor(37, 99, 235)
                 doc.add_paragraph(u.get('text', ''))
         else:
-            doc.add_paragraph(data.get("transcript"))
+            doc.add_paragraph(str(data.get("transcript") or ""))
         sec_num += 1
         
     doc.save(output_filepath)
@@ -144,7 +146,9 @@ def generate_docx(data: dict, output_filepath: str, sections: dict = None) -> st
 
 def generate_pdf(data: dict, output_filepath: str, sections: dict = None) -> str:
     """Generates a professional PDF file from structured meeting data with selective sections."""
-    if sections is None:
+    if isinstance(sections, (list, tuple, set)):
+        sections = {k: True for k in sections}
+    elif not sections or not isinstance(sections, dict):
         sections = {
             "summary": True,
             "decisions": True,
