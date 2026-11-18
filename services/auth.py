@@ -213,12 +213,15 @@ def update_user_profile(db_path: str, current_email: str, new_name: str, new_ema
             "UPDATE users SET name = ?, email = ? WHERE email = ?",
             (clean_name, clean_email, old_email),
         )
-        # Migrate any user meetings to the updated email address
+        # Migrate any user meetings to the updated email address if table exists
         if clean_email != old_email:
-            conn.execute(
-                "UPDATE meetings SET user_email = ? WHERE user_email = ?",
-                (clean_email, old_email),
-            )
+            try:
+                conn.execute(
+                    "UPDATE meetings SET user_email = ? WHERE user_email = ?",
+                    (clean_email, old_email),
+                )
+            except sqlite3.OperationalError:
+                pass
         conn.commit()
 
         return True, {
