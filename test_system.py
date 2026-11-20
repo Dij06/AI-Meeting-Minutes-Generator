@@ -32,7 +32,9 @@ def post_multipart(url, fields, files):
         return resp.getcode(), json.loads(resp.read().decode("utf-8"))
 
 def test_recording(filename, language):
-    filepath = os.path.join("sample_recordings", filename)
+    filepath = os.path.join("static", "audio", filename)
+    if not os.path.exists(filepath):
+        filepath = os.path.join("sample_recordings", filename)
     print(f"\n==========================================")
     print(f"Testing {filename} (Language: {language})")
     print(f"==========================================")

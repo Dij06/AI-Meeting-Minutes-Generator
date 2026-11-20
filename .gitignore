@@ -41,15 +41,13 @@ frontend/outputs/*
 .env.local
 .env.development
 .env.production
+!.env.example
 
-# Temporary & Swap files
-*.tmp
-*.temp
-*.bak
-*.swp
-*.swo
+# Local databases & instance folder
+instance/
 *.db
 *.sqlite
+*.sqlite3
 *.pem
 *.key
 
