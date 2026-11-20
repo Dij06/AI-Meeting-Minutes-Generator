@@ -54,6 +54,9 @@ instance/
 # Local notes & project context
 PROJECT_CONTEXT.md
 docs/
+test_system.py
+services/migrate_*.py
+vercel.json
 
 # IDE & OS files
 .vscode/
