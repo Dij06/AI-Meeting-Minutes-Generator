@@ -122,11 +122,6 @@ AI-Meeting-Minutes-Generator/
 ├── .gitignore                 # Git ignore rules
 ├── README.md                  # Project documentation
 │
-├── docs/                      # Technical documentation and guides
-│   ├── final_phase_checklist.md
-│   ├── frontend_architecture.md
-│   └── viva_preparation_guide.md
-│
 ├── services/                  # Backend services and modules
 │   ├── __init__.py            # Package initialization
 │   ├── transcriber.py         # Speech recognition & audio ingestion

@@ -51,6 +51,10 @@ instance/
 *.pem
 *.key
 
+# Local notes & project context
+PROJECT_CONTEXT.md
+docs/
+
 # IDE & OS files
 .vscode/
 .idea/
